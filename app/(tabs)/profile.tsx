@@ -20,19 +20,7 @@ import {
   Sparkles,
 } from "lucide-react-native";
 import { COLORS } from "@/lib/constants";
-
-const PROFILE = {
-  username: "johndoe",
-  displayName: "John Doe",
-  email: "john@example.com",
-  memberSince: "March 2025",
-  stats: {
-    favorites: 24,
-    reservations: 8,
-    orders: 15,
-    reviews: 6,
-  },
-};
+import { useAuthStore } from "@/stores/auth-store";
 
 function StatItem({ value, label }: { value: number; label: string }) {
   return (
@@ -72,6 +60,19 @@ function MenuLink({
 }
 
 export default function ProfileScreen() {
+  const { profile, user, signOut } = useAuthStore();
+
+  const displayName = profile?.display_name || profile?.username || user?.email?.split("@")[0] || "User";
+  const username = profile?.username || user?.email?.split("@")[0] || "user";
+  const memberSince = user?.created_at
+    ? new Date(user.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" })
+    : "Recently";
+
+  const handleSignOut = async () => {
+    await signOut();
+    router.replace("/auth/welcome");
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
@@ -81,34 +82,34 @@ export default function ProfileScreen() {
         <View style={styles.profileHeader}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>
-              {PROFILE.displayName[0]}
+              {displayName[0].toUpperCase()}
             </Text>
           </View>
-          <Text style={styles.displayName}>{PROFILE.displayName}</Text>
-          <Text style={styles.username}>@{PROFILE.username}</Text>
+          <Text style={styles.displayName}>{displayName}</Text>
+          <Text style={styles.username}>@{username}</Text>
           <Text style={styles.memberSince}>
-            <MapPin size={12} color={COLORS.textSecondary} /> Member since {PROFILE.memberSince}
+            <MapPin size={12} color={COLORS.textSecondary} /> Member since {memberSince}
           </Text>
         </View>
 
         {/* Stats */}
         <View style={styles.statsRow}>
-          <StatItem value={PROFILE.stats.favorites} label="Favorites" />
+          <StatItem value={0} label="Favorites" />
           <View style={styles.statDivider} />
-          <StatItem value={PROFILE.stats.reservations} label="Reservations" />
+          <StatItem value={0} label="Reservations" />
           <View style={styles.statDivider} />
-          <StatItem value={PROFILE.stats.orders} label="Orders" />
+          <StatItem value={0} label="Orders" />
           <View style={styles.statDivider} />
-          <StatItem value={PROFILE.stats.reviews} label="Reviews" />
+          <StatItem value={0} label="Reviews" />
         </View>
 
-        {/* AI Taste Profile */}
+        {/* Taste Profile */}
         <View style={styles.menuSection}>
-          <Text style={styles.sectionTitle}>AI & Personalization</Text>
+          <Text style={styles.sectionTitle}>Personalization</Text>
           <MenuLink
             icon={Sparkles}
             label="Your Taste Profile"
-            subtitle="AI-powered food preferences & DNA"
+            subtitle="Food preferences & taste DNA"
             onPress={() => router.push("/taste-profile" as any)}
           />
         </View>
@@ -154,6 +155,7 @@ export default function ProfileScreen() {
           <MenuLink
             icon={LogOut}
             label="Sign Out"
+            onPress={handleSignOut}
           />
         </View>
       </ScrollView>

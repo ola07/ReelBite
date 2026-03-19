@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -6,11 +6,13 @@ import {
   FlatList,
   Pressable,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { ShoppingBag, Clock, CheckCircle, ChevronRight } from "lucide-react-native";
 import { COLORS } from "@/lib/constants";
+import { useOrders } from "@/hooks";
 
 type MockOrder = {
   id: string;
@@ -123,7 +125,25 @@ function OrderCard({ order, isActive }: { order: MockOrder; isActive: boolean })
 
 export default function OrdersScreen() {
   const [activeTab, setActiveTab] = useState<"active" | "past">("active");
-  const orders = activeTab === "active" ? MOCK_ACTIVE_ORDERS : MOCK_PAST_ORDERS;
+  const { data: realOrders, isLoading } = useOrders(activeTab);
+
+  // Convert real orders to display format, fall back to mock
+  const orders = useMemo(() => {
+    if (realOrders && realOrders.length > 0) {
+      return realOrders.map((o): MockOrder => ({
+        id: o.id,
+        restaurant: o.restaurant?.name || "Restaurant",
+        items: o.items?.map((i) => `${i.menu_item?.name || "Item"} x${i.quantity}`) || [],
+        total: Number(o.total),
+        status: (o.status === "confirmed" || o.status === "preparing" ? "preparing" :
+                 o.status === "ready" ? "ready" :
+                 o.status === "picked_up" ? "picked_up" : "delivered") as MockOrder["status"],
+        date: o.created_at,
+        orderNumber: o.order_number,
+      }));
+    }
+    return activeTab === "active" ? MOCK_ACTIVE_ORDERS : MOCK_PAST_ORDERS;
+  }, [realOrders, activeTab]);
 
   return (
     <SafeAreaView style={styles.container}>

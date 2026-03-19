@@ -300,7 +300,7 @@ export default function AIConciergeScreen() {
             <Sparkles size={20} color={COLORS.coral} />
           </View>
           <View>
-            <Text style={styles.headerTitle}>AI Food Concierge</Text>
+            <Text style={styles.headerTitle}>Food Finder</Text>
             <Text style={styles.headerSubtitle}>Tell me what you're craving</Text>
           </View>
         </View>

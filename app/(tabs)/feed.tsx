@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useRef, useState, useMemo } from "react";
 import {
   StyleSheet,
   View,
@@ -7,6 +7,7 @@ import {
   useWindowDimensions,
   Platform,
   ViewToken,
+  ActivityIndicator,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { COLORS } from "@/lib/constants";
@@ -18,6 +19,7 @@ import FeedCategories, { FeedCategory } from "@/components/feed/FeedCategories";
 import CommunityBadge from "@/components/feed/CommunityBadge";
 import ReviewCard from "@/components/feed/ReviewCard";
 import CriticBadge from "@/components/creator/CriticBadge";
+import { useVideos, useToggleLike, useToggleBookmark } from "@/hooks";
 
 const TAB_BAR_HEIGHT = Platform.OS === "ios" ? 90 : 80;
 
@@ -27,15 +29,26 @@ export default function FeedScreen() {
 
   const { isMuted, toggleMute, currentIndex, setCurrentIndex } = useFeedStore();
 
-  const [videos, setVideos] = useState<VideoWithDetails[]>(MOCK_VIDEOS);
   const [activeCategory, setActiveCategory] = useState<FeedCategory>("for_you");
 
-  const filteredVideos = React.useMemo(() => {
+  // Fetch real data, fall back to mock data
+  const { data: videoPages, isLoading, fetchNextPage, hasNextPage } = useVideos(activeCategory);
+  const toggleLike = useToggleLike();
+  const toggleBookmark = useToggleBookmark();
+
+  const videos: VideoWithDetails[] = useMemo(() => {
+    const realVideos = videoPages?.pages?.flat() ?? [];
+    return realVideos.length > 0 ? realVideos : MOCK_VIDEOS;
+  }, [videoPages]);
+
+  const filteredVideos = useMemo(() => {
+    // If using real data, the hook already applies filters
+    if (videoPages?.pages?.flat()?.length) return videos;
+    // Fallback: client-side filter on mock data
     switch (activeCategory) {
       case "trending":
         return [...videos].sort((a, b) => b.engagement_score - a.engagement_score);
       case "near_me":
-        // In real app, sort by geo proximity. For now, reverse order as mock.
         return [...videos].reverse();
       case "following":
         return videos.filter((v) => v.creator.is_verified);
@@ -43,7 +56,7 @@ export default function FeedScreen() {
       default:
         return videos;
     }
-  }, [videos, activeCategory]);
+  }, [videos, activeCategory, videoPages]);
 
   const viewabilityConfig = useRef({
     itemVisiblePercentThreshold: 70,
@@ -59,38 +72,22 @@ export default function FeedScreen() {
 
   const handleLike = useCallback(
     (videoId: string) => {
-      setVideos((prev) =>
-        prev.map((v) =>
-          v.id === videoId
-            ? {
-                ...v,
-                is_liked: !v.is_liked,
-                like_count: v.is_liked ? v.like_count - 1 : v.like_count + 1,
-              }
-            : v
-        )
-      );
+      const video = videos.find((v) => v.id === videoId);
+      if (video) {
+        toggleLike.mutate({ videoId, isLiked: video.is_liked });
+      }
     },
-    []
+    [videos, toggleLike]
   );
 
   const handleBookmark = useCallback(
     (videoId: string) => {
-      setVideos((prev) =>
-        prev.map((v) =>
-          v.id === videoId
-            ? {
-                ...v,
-                is_bookmarked: !v.is_bookmarked,
-                bookmark_count: v.is_bookmarked
-                  ? v.bookmark_count - 1
-                  : v.bookmark_count + 1,
-              }
-            : v
-        )
-      );
+      const video = videos.find((v) => v.id === videoId);
+      if (video) {
+        toggleBookmark.mutate({ videoId, isBookmarked: video.is_bookmarked });
+      }
     },
-    []
+    [videos, toggleBookmark]
   );
 
   const handleComment = useCallback((_videoId: string) => {}, []);

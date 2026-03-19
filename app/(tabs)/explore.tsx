@@ -13,6 +13,7 @@ import { Compass, Grid3X3 } from "lucide-react-native";
 import { COLORS, VIBES, VIBE_ICONS, MOODS, MOOD_ICONS, CRAVINGS, CRAVING_ICONS, DIETARY, DIETARY_ICONS } from "@/lib/constants";
 import { MOCK_RESTAURANTS, RESTAURANT_TAGS } from "@/lib/mock-data";
 import { Restaurant } from "@/types";
+import { useRestaurants } from "@/hooks";
 import SearchBar from "@/components/explore/SearchBar";
 import FilterChips from "@/components/explore/FilterChips";
 import RestaurantCard from "@/components/explore/RestaurantCard";
@@ -67,8 +68,12 @@ export default function ExploreScreen() {
     [activeDietary]
   );
 
+  // Fetch real restaurants, fall back to mock
+  const { data: realRestaurants } = useRestaurants({ search: searchQuery.trim() || undefined, cuisine: activeCuisine || undefined });
+  const allRestaurants = realRestaurants && realRestaurants.length > 0 ? realRestaurants : MOCK_RESTAURANTS;
+
   const filteredRestaurants = useMemo(() => {
-    let results = MOCK_RESTAURANTS;
+    let results = allRestaurants;
 
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
@@ -115,24 +120,27 @@ export default function ExploreScreen() {
     }
 
     return results;
-  }, [searchQuery, activeCuisine, mode, activeVibes, activeMoods, activeCravings, activeDietary]);
+  }, [searchQuery, activeCuisine, mode, activeVibes, activeMoods, activeCravings, activeDietary, allRestaurants]);
 
   const trendingRestaurants = useMemo(
     () =>
-      [...MOCK_RESTAURANTS]
+      [...allRestaurants]
         .sort((a, b) => b.total_reviews - a.total_reviews)
         .slice(0, 5),
-    []
+    [allRestaurants]
   );
 
   const localHighlights = useMemo(
-    () => [
-      { type: "hot_right_now" as const, restaurant: MOCK_RESTAURANTS[2], reason: "512 reviews this month" },
-      { type: "rising" as const, restaurant: MOCK_RESTAURANTS[4], reason: "Trending in your area" },
-      { type: "most_reviewed" as const, restaurant: MOCK_RESTAURANTS[0], reason: "Top rated Italian" },
-      { type: "new_arrival" as const, restaurant: MOCK_RESTAURANTS[5], reason: "Opened 2 weeks ago" },
-    ],
-    []
+    () => {
+      const r = allRestaurants;
+      return [
+        r[2] && { type: "hot_right_now" as const, restaurant: r[2], reason: `${r[2].total_reviews} reviews this month` },
+        r[4] && { type: "rising" as const, restaurant: r[4], reason: "Trending in your area" },
+        r[0] && { type: "most_reviewed" as const, restaurant: r[0], reason: `Top rated ${r[0].cuisine_type[0]}` },
+        r[5] && { type: "new_arrival" as const, restaurant: r[5], reason: "Opened recently" },
+      ].filter(Boolean) as any[];
+    },
+    [allRestaurants]
   );
 
   const handleToggleFilter = useCallback(
@@ -249,7 +257,7 @@ export default function ExploreScreen() {
           >
             <Compass size={16} color={mode === "discover" ? COLORS.coral : COLORS.textSecondary} />
             <Text style={[styles.modeBtnText, mode === "discover" && styles.modeBtnTextActive]}>
-              Discover
+              Vibe Match
             </Text>
           </Pressable>
         </View>

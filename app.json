@@ -40,6 +40,20 @@
         {
           "locationWhenInUsePermission": "ReelBite needs your location to find restaurants near you."
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "ReelBite needs access to your photos to upload food videos.",
+          "cameraPermission": "ReelBite needs access to your camera to record food videos."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#10B981"
+        }
       ]
     ],
     "experiments": {

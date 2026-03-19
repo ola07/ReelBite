@@ -29,7 +29,7 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
             const icons: Record<string, any> = {
               feed: Flame,
               explore: Search,
-              ai: Sparkles,
+              discover: Sparkles,
               orders: ShoppingBag,
               profile: User,
             };
@@ -92,8 +92,8 @@ export default function TabLayout() {
         options={{ title: "Explore", tabBarLabel: "Explore" }}
       />
       <Tabs.Screen
-        name="ai"
-        options={{ title: "AI", tabBarLabel: "AI" }}
+        name="discover"
+        options={{ title: "Discover", tabBarLabel: "Discover" }}
       />
       <Tabs.Screen
         name="orders"

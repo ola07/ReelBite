@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { Session, User } from "@supabase/supabase-js";
 import { Profile } from "@/types";
+import { supabase } from "@/lib/supabase";
 
 interface AuthState {
   session: Session | null;
@@ -10,17 +11,107 @@ interface AuthState {
   setSession: (session: Session | null) => void;
   setProfile: (profile: Profile | null) => void;
   setLoading: (loading: boolean) => void;
-  signOut: () => void;
+  fetchProfile: () => Promise<void>;
+  signIn: (email: string, password: string) => Promise<{ error: string | null }>;
+  signUp: (email: string, password: string, username: string) => Promise<{ error: string | null }>;
+  signOut: () => Promise<void>;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   session: null,
   user: null,
   profile: null,
   isLoading: true,
+
   setSession: (session) =>
     set({ session, user: session?.user ?? null }),
+
   setProfile: (profile) => set({ profile }),
+
   setLoading: (isLoading) => set({ isLoading }),
-  signOut: () => set({ session: null, user: null, profile: null }),
+
+  fetchProfile: async () => {
+    const { user } = get();
+    if (!user) {
+      set({ profile: null });
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
+      .single();
+
+    if (!error && data) {
+      set({ profile: data as Profile });
+    }
+  },
+
+  signIn: async (email, password) => {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      return { error: error.message };
+    }
+
+    set({ session: data.session, user: data.session?.user ?? null });
+
+    // Fetch profile after login
+    if (data.session?.user) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", data.session.user.id)
+        .single();
+
+      if (profile) {
+        set({ profile: profile as Profile });
+      }
+    }
+
+    return { error: null };
+  },
+
+  signUp: async (email, password, username) => {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          username,
+          display_name: username,
+        },
+      },
+    });
+
+    if (error) {
+      return { error: error.message };
+    }
+
+    if (data.session) {
+      set({ session: data.session, user: data.session.user });
+
+      // Profile is auto-created by the database trigger
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", data.session.user.id)
+        .single();
+
+      if (profile) {
+        set({ profile: profile as Profile });
+      }
+    }
+
+    return { error: null };
+  },
+
+  signOut: async () => {
+    await supabase.auth.signOut();
+    set({ session: null, user: null, profile: null });
+  },
 }));

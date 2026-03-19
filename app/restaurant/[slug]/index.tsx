@@ -27,6 +27,9 @@ import {
   MENU_ITEM_VIDEOS,
 } from "@/lib/mock-data";
 import { MenuItem, ReviewWithProfile, MenuCategory } from "@/types";
+import { useRestaurant } from "@/hooks/use-restaurants";
+import { useMenuCategories, useMenuItems } from "@/hooks/use-menu";
+import { useReviews } from "@/hooks/use-reviews";
 import { formatCurrency, formatRelativeTime } from "@/lib/utils";
 import RatingStars from "@/components/shared/RatingStars";
 import PriceLevel from "@/components/shared/PriceLevel";
@@ -295,10 +298,13 @@ export default function RestaurantProfileScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const [activeTab, setActiveTab] = useState<TabKey>("menu");
 
-  const restaurant = useMemo(
-    () => MOCK_RESTAURANTS.find((r) => r.slug === slug),
-    [slug]
-  );
+  // Fetch real data with mock fallback
+  const { data: realRestaurant } = useRestaurant(slug);
+  const restaurant = realRestaurant || MOCK_RESTAURANTS.find((r) => r.slug === slug);
+
+  const { data: realCategories } = useMenuCategories(restaurant?.id ?? "");
+  const { data: realMenuItems } = useMenuItems(restaurant?.id ?? "");
+  const { data: realReviews } = useReviews(restaurant?.id ?? "");
 
   if (!restaurant) {
     return (
@@ -312,9 +318,9 @@ export default function RestaurantProfileScreen() {
   }
 
   const isOpen = isOpenNow(restaurant.operating_hours);
-  const categories = MOCK_MENU_CATEGORIES[restaurant.id] ?? [];
-  const menuItems = MOCK_MENU_ITEMS[restaurant.id] ?? [];
-  const reviews = MOCK_REVIEWS[restaurant.id] ?? [];
+  const categories = (realCategories && realCategories.length > 0) ? realCategories : (MOCK_MENU_CATEGORIES[restaurant.id] ?? []);
+  const menuItems = (realMenuItems && realMenuItems.length > 0) ? realMenuItems : (MOCK_MENU_ITEMS[restaurant.id] ?? []);
+  const reviews = (realReviews && realReviews.length > 0) ? realReviews : (MOCK_REVIEWS[restaurant.id] ?? []);
 
   return (
     <View style={styles.container}>

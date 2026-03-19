@@ -8,26 +8,38 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { ArrowLeft, Mail, Lock, Eye, EyeOff, Flame } from "lucide-react-native";
 import { COLORS } from "@/lib/constants";
 import Animated, { FadeInDown } from "react-native-reanimated";
+import { useAuthStore } from "@/stores/auth-store";
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const signIn = useAuthStore((s) => s.signIn);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
+    if (!email.trim() || !password.trim()) {
+      Alert.alert("Error", "Please enter both email and password.");
+      return;
+    }
+
     setLoading(true);
-    // Mock login - just navigate to feed
-    setTimeout(() => {
-      setLoading(false);
-      router.replace("/(tabs)/feed");
-    }, 1000);
+    const { error } = await signIn(email.trim(), password);
+    setLoading(false);
+
+    if (error) {
+      Alert.alert("Sign In Failed", error);
+      return;
+    }
+
+    router.replace("/(tabs)/feed");
   };
 
   return (

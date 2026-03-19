@@ -36,6 +36,8 @@ import {
   MOCK_MENU_ITEMS,
 } from "@/lib/mock-data";
 import { MenuItem, MenuCategory } from "@/types";
+import { useRestaurant } from "@/hooks/use-restaurants";
+import { useMenuCategories, useMenuItems } from "@/hooks/use-menu";
 import { formatCurrency } from "@/lib/utils";
 import { useCartStore } from "@/stores/cart-store";
 
@@ -531,19 +533,27 @@ export default function OrderScreen() {
     restaurantId,
   } = useCartStore();
 
-  const restaurant = useMemo(
-    () => MOCK_RESTAURANTS.find((r) => r.slug === slug),
-    [slug]
-  );
+  // Fetch real data with mock fallback
+  const { data: realRestaurant } = useRestaurant(slug);
+  const restaurant = realRestaurant || MOCK_RESTAURANTS.find((r) => r.slug === slug) || null;
+
+  const { data: realCategories } = useMenuCategories(restaurant?.id ?? "");
+  const { data: realMenuItems } = useMenuItems(restaurant?.id ?? "");
 
   const categories = useMemo(
-    () => (restaurant ? MOCK_MENU_CATEGORIES[restaurant.id] ?? [] : []),
-    [restaurant]
+    () => {
+      if (realCategories && realCategories.length > 0) return realCategories;
+      return restaurant ? MOCK_MENU_CATEGORIES[restaurant.id] ?? [] : [];
+    },
+    [restaurant, realCategories]
   );
 
   const menuItems = useMemo(
-    () => (restaurant ? MOCK_MENU_ITEMS[restaurant.id] ?? [] : []),
-    [restaurant]
+    () => {
+      if (realMenuItems && realMenuItems.length > 0) return realMenuItems;
+      return restaurant ? MOCK_MENU_ITEMS[restaurant.id] ?? [] : [];
+    },
+    [restaurant, realMenuItems]
   );
 
   const sections: SectionData[] = useMemo(() => {

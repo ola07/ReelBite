@@ -7,6 +7,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useAuthStore } from "@/stores/auth-store";
 import { supabase } from "@/lib/supabase";
 import { View } from "react-native";
+import Toast from "@/components/ui/Toast";
+import ErrorBoundary from "@/components/ui/ErrorBoundary";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -15,16 +17,18 @@ const queryClient = new QueryClient({
 });
 
 export default function RootLayout() {
-  const { setSession, setLoading } = useAuthStore();
+  const { setSession, setLoading, fetchProfile } = useAuthStore();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setLoading(false);
+      if (session) fetchProfile();
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+      if (session) fetchProfile();
     });
 
     return () => subscription.unsubscribe();
@@ -33,16 +37,19 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <QueryClientProvider client={queryClient}>
-        <View style={{ flex: 1, backgroundColor: "#0A0A0A" }}>
-          <StatusBar style="light" />
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: "#0A0A0A" },
-              animation: "slide_from_right",
-            }}
-          />
-        </View>
+        <ErrorBoundary>
+          <View style={{ flex: 1, backgroundColor: "#0A0A0A" }}>
+            <StatusBar style="light" />
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                contentStyle: { backgroundColor: "#0A0A0A" },
+                animation: "slide_from_right",
+              }}
+            />
+            <Toast />
+          </View>
+        </ErrorBoundary>
       </QueryClientProvider>
     </GestureHandlerRootView>
   );

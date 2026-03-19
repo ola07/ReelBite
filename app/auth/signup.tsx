@@ -8,12 +8,14 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { ArrowLeft, User, Mail, Lock, Eye, EyeOff, Flame } from "lucide-react-native";
 import { COLORS } from "@/lib/constants";
 import Animated, { FadeInDown } from "react-native-reanimated";
+import { useAuthStore } from "@/stores/auth-store";
 
 export default function SignupScreen() {
   const [username, setUsername] = useState("");
@@ -21,13 +23,29 @@ export default function SignupScreen() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const signUp = useAuthStore((s) => s.signUp);
 
-  const handleSignup = () => {
+  const handleSignup = async () => {
+    if (!username.trim() || !email.trim() || !password.trim()) {
+      Alert.alert("Error", "Please fill in all fields.");
+      return;
+    }
+
+    if (password.length < 6) {
+      Alert.alert("Error", "Password must be at least 6 characters.");
+      return;
+    }
+
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      router.replace("/(tabs)/feed");
-    }, 1000);
+    const { error } = await signUp(email.trim(), password, username.trim());
+    setLoading(false);
+
+    if (error) {
+      Alert.alert("Sign Up Failed", error);
+      return;
+    }
+
+    router.replace("/(tabs)/feed");
   };
 
   return (

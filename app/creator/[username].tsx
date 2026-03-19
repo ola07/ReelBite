@@ -6,8 +6,9 @@ import { COLORS } from "@/lib/constants";
 import { formatCount } from "@/lib/utils";
 import { MOCK_CREATORS, MOCK_VIDEOS, CREATOR_TIERS } from "@/lib/mock-data";
 import { LinearGradient } from "expo-linear-gradient";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import CriticBadge from "@/components/creator/CriticBadge";
+import { useCreator, useCreatorVideos, useToggleFollow } from "@/hooks";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const GRID_GAP = 2;
@@ -15,8 +16,15 @@ const THUMB_SIZE = (SCREEN_WIDTH - GRID_GAP * 2) / 3;
 
 export default function CreatorProfileScreen() {
   const { username } = useLocalSearchParams<{ username: string }>();
-  const creator = MOCK_CREATORS.find((c) => c.profile.username === username) || MOCK_CREATORS[0];
-  const creatorVideos = MOCK_VIDEOS.filter((v) => v.creator_id === creator.id);
+
+  // Fetch real data with mock fallback
+  const { data: realCreator } = useCreator(username);
+  const creator = realCreator || MOCK_CREATORS.find((c) => c.profile.username === username) || MOCK_CREATORS[0];
+
+  const { data: realVideos } = useCreatorVideos(creator.id);
+  const creatorVideos = (realVideos && realVideos.length > 0) ? realVideos : MOCK_VIDEOS.filter((v) => v.creator_id === creator.id);
+
+  const toggleFollow = useToggleFollow();
   const [isFollowing, setIsFollowing] = useState(creator.is_following);
   const tier = CREATOR_TIERS[creator.id];
 
@@ -89,7 +97,10 @@ export default function CreatorProfileScreen() {
                   isFollowing && styles.followingBtn,
                   pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] },
                 ]}
-                onPress={() => setIsFollowing(!isFollowing)}
+                onPress={() => {
+                  toggleFollow.mutate({ creatorId: creator.id, isFollowing });
+                  setIsFollowing(!isFollowing);
+                }}
               >
                 <Text style={[styles.followBtnText, isFollowing && styles.followingBtnText]}>
                   {isFollowing ? "Following" : "Follow"}
