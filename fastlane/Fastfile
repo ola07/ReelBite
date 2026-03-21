@@ -1,0 +1,80 @@
+default_platform(:ios)
+
+# ── Shared ────────────────────────────────────────────────────────────────────
+
+before_all do
+  ensure_git_status_clean
+end
+
+# ── iOS ───────────────────────────────────────────────────────────────────────
+
+platform :ios do
+  desc "Run iOS tests"
+  lane :test do
+    run_tests(scheme: "ReelBite")
+  end
+
+  desc "Build & upload to TestFlight"
+  lane :beta do
+    increment_build_number(xcodeproj: "ios/ReelBite.xcodeproj")
+    build_app(
+      scheme: "ReelBite",
+      workspace: "ios/ReelBite.xcworkspace",
+      export_method: "app-store",
+    )
+    upload_to_testflight(skip_waiting_for_build_processing: true)
+    slack(message: "iOS beta uploaded to TestFlight ✅") if ENV["SLACK_URL"]
+  end
+
+  desc "Release to App Store"
+  lane :release do
+    increment_version_number(xcodeproj: "ios/ReelBite.xcodeproj")
+    increment_build_number(xcodeproj: "ios/ReelBite.xcodeproj")
+    build_app(
+      scheme: "ReelBite",
+      workspace: "ios/ReelBite.xcworkspace",
+      export_method: "app-store",
+    )
+    upload_to_app_store(
+      force: true,
+      reject_if_possible: true,
+      skip_screenshots: true,
+      submit_for_review: true,
+      automatic_release: false,
+    )
+    slack(message: "iOS release submitted to App Store ✅") if ENV["SLACK_URL"]
+  end
+
+  desc "Sync code signing (read-only)"
+  lane :certs do
+    match(type: "appstore", readonly: true)
+    match(type: "development", readonly: true)
+  end
+end
+
+# ── Android ───────────────────────────────────────────────────────────────────
+
+platform :android do
+  desc "Build & upload to Play Store internal track"
+  lane :beta do
+    gradle(
+      task: "bundle",
+      build_type: "Release",
+      project_dir: "android/",
+    )
+    upload_to_play_store(
+      track: "internal",
+      aab: "android/app/build/outputs/bundle/release/app-release.aab",
+    )
+    slack(message: "Android beta uploaded to Play Store ✅") if ENV["SLACK_URL"]
+  end
+
+  desc "Promote internal build to production"
+  lane :release do
+    upload_to_play_store(
+      track: "internal",
+      track_promote_to: "production",
+    )
+    slack(message: "Android release promoted to production ✅") if ENV["SLACK_URL"]
+  end
+end

@@ -1,0 +1,10 @@
+app_identifier("com.reelbite.app")
+
+apple_id(ENV["APPLE_ID"])
+itc_team_id(ENV["ITC_TEAM_ID"])
+team_id(ENV["TEAM_ID"])
+
+for_platform :android do
+  json_key_file(ENV["GOOGLE_PLAY_JSON_KEY"])
+  package_name("com.reelbite.app")
+end

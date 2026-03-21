@@ -58,6 +58,11 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "mixpanelToken": "",
+      "openaiApiKey": "",
+      "geminiApiKey": ""
     }
   }
 }
