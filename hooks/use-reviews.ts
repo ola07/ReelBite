@@ -17,7 +17,7 @@ export function useReviews(restaurantId: string) {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return (data ?? []) as ReviewWithProfile[];
+      return (data ?? []) as unknown as ReviewWithProfile[];
     },
     enabled: !!restaurantId,
   });
