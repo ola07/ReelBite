@@ -1,7 +1,6 @@
 import { Mixpanel } from 'mixpanel-react-native';
-import Constants from 'expo-constants';
 
-const TOKEN = (Constants.expoConfig?.extra?.mixpanelToken as string) ?? '';
+const TOKEN = process.env.EXPO_PUBLIC_MIXPANEL_TOKEN ?? '';
 
 const mixpanel = new Mixpanel(TOKEN, true);
 mixpanel.init();

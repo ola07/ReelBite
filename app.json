@@ -54,15 +54,11 @@
           "icon": "./assets/icon.png",
           "color": "#10B981"
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true
-    },
-    "extra": {
-      "mixpanelToken": "",
-      "openaiApiKey": "",
-      "geminiApiKey": ""
     }
   }
 }
