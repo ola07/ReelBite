@@ -19,6 +19,7 @@ import FeedCategories, { FeedCategory } from "@/components/feed/FeedCategories";
 import CommunityBadge from "@/components/feed/CommunityBadge";
 import ReviewCard from "@/components/feed/ReviewCard";
 import CriticBadge from "@/components/creator/CriticBadge";
+import { FeedSkeleton } from "@/components/shared/SkeletonLoader";
 import { useVideos, useToggleLike, useToggleBookmark } from "@/hooks";
 
 const TAB_BAR_HEIGHT = Platform.OS === "ios" ? 90 : 80;
@@ -160,6 +161,15 @@ export default function FeedScreen() {
     }),
     [cardHeight]
   );
+
+  if (isLoading && filteredVideos.length === 0) {
+    return (
+      <View style={styles.container}>
+        <StatusBar style="light" />
+        <FeedSkeleton />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>

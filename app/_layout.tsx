@@ -5,6 +5,7 @@ import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useAuthStore } from "@/stores/auth-store";
+import { useSubscriptionStore } from "@/stores/subscription-store";
 import { supabase } from "@/lib/supabase";
 import { View } from "react-native";
 import Toast from "@/components/ui/Toast";
@@ -20,6 +21,8 @@ export default function RootLayout() {
   const { setSession, setLoading, fetchProfile } = useAuthStore();
 
   useEffect(() => {
+    useSubscriptionStore.getState().initialize();
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setLoading(false);

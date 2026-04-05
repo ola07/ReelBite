@@ -9,11 +9,12 @@ import { LinearGradient } from "expo-linear-gradient";
 import { MapPin } from "lucide-react-native";
 import { COLORS } from "@/lib/constants";
 import { Restaurant } from "@/types";
+import { formatDistance } from "@/hooks/use-location";
 import RatingStars from "@/components/shared/RatingStars";
 import PriceLevel from "@/components/shared/PriceLevel";
 
 interface RestaurantCardProps {
-  restaurant: Restaurant;
+  restaurant: Restaurant & { distance_km?: number };
   onPress: () => void;
   compact?: boolean;
 }
@@ -115,10 +116,14 @@ export default function RestaurantCard({
             showCount
             count={restaurant.total_reviews}
           />
-          <View style={styles.distanceRow}>
-            <MapPin size={14} color={COLORS.textSecondary} />
-            <Text style={styles.distanceText}>0.5 km</Text>
-          </View>
+          {restaurant.distance_km != null && (
+            <View style={styles.distanceRow}>
+              <MapPin size={14} color={COLORS.textSecondary} />
+              <Text style={styles.distanceText}>
+                {formatDistance(restaurant.distance_km)}
+              </Text>
+            </View>
+          )}
         </View>
       </View>
     </AnimatedPressable>

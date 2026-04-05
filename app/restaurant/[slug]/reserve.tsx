@@ -6,6 +6,9 @@ import {
   ScrollView,
   StyleSheet,
   Platform,
+  TextInput,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -29,7 +32,9 @@ import {
 import { COLORS } from "@/lib/constants";
 import { MOCK_RESTAURANTS } from "@/lib/mock-data";
 import { ReservationStep } from "@/types";
-import { generateId } from "@/lib/utils";
+import { useRestaurant } from "@/hooks/use-restaurants";
+import { useCreateReservation } from "@/hooks/use-reservations";
+import { useToastStore } from "@/stores/toast-store";
 
 const STEPS: ReservationStep[] = ["date", "party", "time", "confirm", "success"];
 
@@ -314,13 +319,19 @@ function ConfirmStep({
   date,
   partySize,
   time,
+  specialRequests,
+  onSpecialRequestsChange,
   onConfirm,
+  isLoading,
 }: {
-  restaurant: (typeof MOCK_RESTAURANTS)[0];
+  restaurant: { name: string };
   date: Date;
   partySize: number;
   time: string;
+  specialRequests: string;
+  onSpecialRequestsChange: (text: string) => void;
   onConfirm: () => void;
+  isLoading: boolean;
 }) {
   return (
     <Animated.View entering={FadeIn.duration(300)} style={styles.stepContainer}>
@@ -352,8 +363,28 @@ function ConfirmStep({
         </View>
       </View>
 
-      <Pressable onPress={onConfirm} style={styles.primaryButton}>
-        <Text style={styles.primaryButtonText}>Confirm Reservation</Text>
+      <Text style={styles.specialRequestsLabel}>Special Requests (optional)</Text>
+      <TextInput
+        style={styles.specialRequestsInput}
+        value={specialRequests}
+        onChangeText={onSpecialRequestsChange}
+        placeholder="Dietary restrictions, occasions, seating preferences..."
+        placeholderTextColor={COLORS.textTertiary}
+        multiline
+        numberOfLines={3}
+        maxLength={200}
+      />
+
+      <Pressable
+        onPress={onConfirm}
+        disabled={isLoading}
+        style={[styles.primaryButton, isLoading && styles.primaryButtonDisabled]}
+      >
+        {isLoading ? (
+          <ActivityIndicator color={COLORS.white} />
+        ) : (
+          <Text style={styles.primaryButtonText}>Confirm Reservation</Text>
+        )}
       </Pressable>
     </Animated.View>
   );
@@ -408,10 +439,12 @@ export default function ReserveScreen() {
   const router = useRouter();
   const { slug } = useLocalSearchParams<{ slug: string }>();
 
-  const restaurant = useMemo(
-    () => MOCK_RESTAURANTS.find((r) => r.slug === slug),
-    [slug]
-  );
+  const { data: realRestaurant } = useRestaurant(slug);
+  const restaurant =
+    realRestaurant || MOCK_RESTAURANTS.find((r) => r.slug === slug) || null;
+
+  const createReservation = useCreateReservation();
+  const { showToast } = useToastStore();
 
   const [currentStep, setCurrentStep] = useState(0);
   const [selectedDate, setSelectedDate] = useState(() => {
@@ -422,6 +455,7 @@ export default function ReserveScreen() {
   });
   const [partySize, setPartySize] = useState(2);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const [specialRequests, setSpecialRequests] = useState("");
   const [confirmationCode, setConfirmationCode] = useState("");
 
   if (!restaurant) {
@@ -449,10 +483,23 @@ export default function ReserveScreen() {
     setCurrentStep((prev) => prev + 1);
   };
 
-  const handleConfirm = () => {
-    const code = `RB-${generateId().toUpperCase().slice(0, 6)}`;
-    setConfirmationCode(code);
-    setCurrentStep(STEPS.indexOf("success"));
+  const handleConfirm = async () => {
+    try {
+      const result = await createReservation.mutateAsync({
+        restaurantId: restaurant.id,
+        date: selectedDate.toISOString().split("T")[0],
+        time: selectedTime!,
+        partySize,
+        specialRequests: specialRequests.trim() || undefined,
+      });
+      const code =
+        (result as any)?.confirmation_code ||
+        `RB-${Math.random().toString(36).toUpperCase().slice(2, 8)}`;
+      setConfirmationCode(code);
+      setCurrentStep(STEPS.indexOf("success"));
+    } catch (err: any) {
+      Alert.alert("Reservation Failed", err.message || "Please try again.");
+    }
   };
 
   const handleDone = () => {
@@ -510,7 +557,10 @@ export default function ReserveScreen() {
             date={selectedDate}
             partySize={partySize}
             time={selectedTime!}
+            specialRequests={specialRequests}
+            onSpecialRequestsChange={setSpecialRequests}
             onConfirm={handleConfirm}
+            isLoading={createReservation.isPending}
           />
         )}
         {step === "success" && (
@@ -778,6 +828,28 @@ const styles = StyleSheet.create({
     color: COLORS.textTertiary,
     textAlign: "center",
     marginBottom: 32,
+  },
+
+  // Special Requests
+  specialRequestsLabel: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: COLORS.textSecondary,
+    marginBottom: 8,
+    marginTop: 4,
+  },
+  specialRequestsInput: {
+    backgroundColor: COLORS.darkSurface,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    color: COLORS.white,
+    fontSize: 14,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: COLORS.darkElevated,
+    height: 90,
+    textAlignVertical: "top",
   },
 
   // Buttons

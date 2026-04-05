@@ -1,4 +1,7 @@
 export { useRestaurants, useRestaurant } from "./use-restaurants";
+export type { RestaurantWithDistance } from "./use-restaurants";
+export { useLocation, getDistanceKm, formatDistance } from "./use-location";
+export type { UserLocation } from "./use-location";
 export { useMenuCategories, useMenuItems } from "./use-menu";
 export { useVideos, useToggleLike, useToggleBookmark } from "./use-videos";
 export { useOrders, usePlaceOrder } from "./use-orders";
@@ -6,3 +9,4 @@ export { useReviews, useCreateReview } from "./use-reviews";
 export { useCreator, useCreatorVideos, useToggleFollow } from "./use-creators";
 export { useReservations, useCreateReservation } from "./use-reservations";
 export { useUploadVideo } from "./use-upload";
+export { useCreatorReferralStats, useCreatorRecentReferrals } from "./use-referrals";

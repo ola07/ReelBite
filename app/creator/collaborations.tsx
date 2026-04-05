@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
   ScrollView,
   Pressable,
   StyleSheet,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -22,6 +23,7 @@ import {
 } from "lucide-react-native";
 import { COLORS } from "@/lib/constants";
 import { formatCurrency } from "@/lib/utils";
+import { useToastStore } from "@/stores/toast-store";
 
 type CollabStatus = "pending" | "active" | "completed" | "declined";
 
@@ -88,15 +90,32 @@ type TabKey = "all" | "active" | "pending" | "completed";
 
 export default function CollaborationsScreen() {
   const router = useRouter();
+  const { showToast } = useToastStore();
   const [activeTab, setActiveTab] = useState<TabKey>("all");
+  const [collabs, setCollabs] = useState<Collaboration[]>(MOCK_COLLABS);
+
+  const updateCollabStatus = (id: string, status: CollabStatus) => {
+    setCollabs((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, status } : c))
+    );
+  };
 
   const filteredCollabs = activeTab === "all"
-    ? MOCK_COLLABS
-    : MOCK_COLLABS.filter((c) => c.status === activeTab);
+    ? collabs
+    : collabs.filter((c) => c.status === activeTab);
 
-  const totalEarnings = MOCK_COLLABS.filter((c) => c.status === "completed").reduce((s, c) => s + c.budget, 0);
-  const activeCount = MOCK_COLLABS.filter((c) => c.status === "active").length;
-  const pendingCount = MOCK_COLLABS.filter((c) => c.status === "pending").length;
+  const totalEarnings = useMemo(
+    () => collabs.filter((c) => c.status === "completed").reduce((s, c) => s + c.budget, 0),
+    [collabs]
+  );
+  const activeCount = useMemo(
+    () => collabs.filter((c) => c.status === "active").length,
+    [collabs]
+  );
+  const pendingCount = useMemo(
+    () => collabs.filter((c) => c.status === "pending").length,
+    [collabs]
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -187,10 +206,38 @@ export default function CollaborationsScreen() {
                 </View>
                 {collab.status === "pending" && (
                   <View style={styles.actionRow}>
-                    <Pressable style={styles.acceptBtn}>
+                    <Pressable
+                      style={styles.acceptBtn}
+                      onPress={() => {
+                        updateCollabStatus(collab.id, "active");
+                        showToast(
+                          `Accepted collaboration with ${collab.restaurantName}`,
+                          "success"
+                        );
+                      }}
+                    >
                       <Text style={styles.acceptBtnText}>Accept</Text>
                     </Pressable>
-                    <Pressable style={styles.declineBtn}>
+                    <Pressable
+                      style={styles.declineBtn}
+                      onPress={() => {
+                        Alert.alert(
+                          "Decline Collaboration",
+                          `Are you sure you want to decline the offer from ${collab.restaurantName}?`,
+                          [
+                            { text: "Cancel", style: "cancel" },
+                            {
+                              text: "Decline",
+                              style: "destructive",
+                              onPress: () => {
+                                updateCollabStatus(collab.id, "declined");
+                                showToast("Collaboration declined", "info");
+                              },
+                            },
+                          ]
+                        );
+                      }}
+                    >
                       <Text style={styles.declineBtnText}>Decline</Text>
                     </Pressable>
                   </View>

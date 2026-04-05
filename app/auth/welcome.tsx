@@ -55,12 +55,6 @@ export default function WelcomeScreen() {
             </Text>
           </Pressable>
 
-          <Pressable
-            style={({ pressed }) => [pressed && { opacity: 0.7 }]}
-            onPress={() => router.replace("/(tabs)/feed")}
-          >
-            <Text style={styles.skipText}>Skip for now</Text>
-          </Pressable>
         </Animated.View>
       </SafeAreaView>
     </View>

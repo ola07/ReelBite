@@ -13,7 +13,8 @@ import { Compass, Grid3X3 } from "lucide-react-native";
 import { COLORS, VIBES, VIBE_ICONS, MOODS, MOOD_ICONS, CRAVINGS, CRAVING_ICONS, DIETARY, DIETARY_ICONS } from "@/lib/constants";
 import { MOCK_RESTAURANTS, RESTAURANT_TAGS } from "@/lib/mock-data";
 import { Restaurant } from "@/types";
-import { useRestaurants } from "@/hooks";
+import { useRestaurants, useLocation } from "@/hooks";
+import type { RestaurantWithDistance } from "@/hooks";
 import SearchBar from "@/components/explore/SearchBar";
 import FilterChips from "@/components/explore/FilterChips";
 import RestaurantCard from "@/components/explore/RestaurantCard";
@@ -30,6 +31,7 @@ type ExploreMode = "cuisine" | "discover";
 export default function ExploreScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { location } = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [mode, setMode] = useState<ExploreMode>("cuisine");
 
@@ -68,8 +70,13 @@ export default function ExploreScreen() {
     [activeDietary]
   );
 
-  // Fetch real restaurants, fall back to mock
-  const { data: realRestaurants } = useRestaurants({ search: searchQuery.trim() || undefined, cuisine: activeCuisine || undefined });
+  // Fetch real restaurants with location-based distance, fall back to mock
+  const { data: realRestaurants } = useRestaurants({
+    search: searchQuery.trim() || undefined,
+    cuisine: activeCuisine || undefined,
+    location: location ?? undefined,
+    sortByDistance: true,
+  });
   const allRestaurants = realRestaurants && realRestaurants.length > 0 ? realRestaurants : MOCK_RESTAURANTS;
 
   const filteredRestaurants = useMemo(() => {
@@ -122,10 +129,16 @@ export default function ExploreScreen() {
     return results;
   }, [searchQuery, activeCuisine, mode, activeVibes, activeMoods, activeCravings, activeDietary, allRestaurants]);
 
-  const trendingRestaurants = useMemo(
+  const nearbyRestaurants = useMemo(
     () =>
       [...allRestaurants]
-        .sort((a, b) => b.total_reviews - a.total_reviews)
+        .sort((a, b) => {
+          // Sort by distance if available, otherwise by reviews
+          if ((a as RestaurantWithDistance).distance_km != null && (b as RestaurantWithDistance).distance_km != null) {
+            return (a as RestaurantWithDistance).distance_km! - (b as RestaurantWithDistance).distance_km!;
+          }
+          return b.total_reviews - a.total_reviews;
+        })
         .slice(0, 5),
     [allRestaurants]
   );
@@ -163,7 +176,7 @@ export default function ExploreScreen() {
   );
 
   const renderRestaurantItem = useCallback(
-    ({ item }: { item: Restaurant }) => (
+    ({ item }: { item: RestaurantWithDistance }) => (
       <RestaurantCard
         restaurant={item}
         onPress={() => handleRestaurantPress(item)}
@@ -172,7 +185,7 @@ export default function ExploreScreen() {
     [handleRestaurantPress]
   );
 
-  const keyExtractor = useCallback((item: Restaurant) => item.id, []);
+  const keyExtractor = useCallback((item: RestaurantWithDistance) => item.id, []);
 
   const hasDiscoveryFilters =
     activeVibes.length > 0 ||
@@ -194,13 +207,15 @@ export default function ExploreScreen() {
         {/* Trending Near You */}
         {mode === "cuisine" && !searchQuery.trim() && (
           <View style={styles.sectionContainer}>
-            <Text style={styles.sectionTitle}>Trending Near You</Text>
+            <Text style={styles.sectionTitle}>
+              {location ? "Nearest to You" : "Trending Near You"}
+            </Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.trendingScroll}
             >
-              {trendingRestaurants.map((restaurant) => (
+              {nearbyRestaurants.map((restaurant) => (
                 <RestaurantCard
                   key={restaurant.id}
                   restaurant={restaurant}
@@ -226,7 +241,7 @@ export default function ExploreScreen() {
       </View>
     ),
     [
-      trendingRestaurants,
+      nearbyRestaurants,
       filteredRestaurants.length,
       handleRestaurantPress,
       mode,

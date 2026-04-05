@@ -3,6 +3,34 @@ import { Session, User } from "@supabase/supabase-js";
 import { Profile } from "@/types";
 import { supabase } from "@/lib/supabase";
 
+// ── Auth rate limiter ─────────────────────────────────────────────────────────
+// Max 5 failed attempts, then 15-minute lockout
+const MAX_ATTEMPTS = 5;
+const LOCKOUT_MS = 15 * 60 * 1000;
+let failedAttempts = 0;
+let lockoutUntil = 0;
+
+function checkRateLimit(): string | null {
+  if (Date.now() < lockoutUntil) {
+    const remaining = Math.ceil((lockoutUntil - Date.now()) / 60000);
+    return `Too many failed attempts. Try again in ${remaining} minute${remaining === 1 ? "" : "s"}.`;
+  }
+  return null;
+}
+
+function recordFailedAttempt() {
+  failedAttempts += 1;
+  if (failedAttempts >= MAX_ATTEMPTS) {
+    lockoutUntil = Date.now() + LOCKOUT_MS;
+    failedAttempts = 0;
+  }
+}
+
+function resetAttempts() {
+  failedAttempts = 0;
+  lockoutUntil = 0;
+}
+
 interface AuthState {
   session: Session | null;
   user: User | null;
@@ -49,14 +77,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   signIn: async (email, password) => {
+    const rateLimitError = checkRateLimit();
+    if (rateLimitError) return { error: rateLimitError };
+
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
     if (error) {
+      recordFailedAttempt();
       return { error: error.message };
     }
+
+    resetAttempts();
 
     set({ session: data.session, user: data.session?.user ?? null });
 

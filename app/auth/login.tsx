@@ -9,6 +9,7 @@ import {
   Platform,
   ScrollView,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -16,6 +17,9 @@ import { ArrowLeft, Mail, Lock, Eye, EyeOff, Flame } from "lucide-react-native";
 import { COLORS } from "@/lib/constants";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { useAuthStore } from "@/stores/auth-store";
+import { supabase } from "@/lib/supabase";
+import { signInWithGoogle, signInWithApple } from "@/lib/social-auth";
+import { GoogleIcon, AppleIcon } from "@/components/shared/SocialIcons";
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
@@ -25,13 +29,20 @@ export default function LoginScreen() {
   const signIn = useAuthStore((s) => s.signIn);
 
   const handleLogin = async () => {
-    if (!email.trim() || !password.trim()) {
+    const trimmedEmail = email.trim();
+
+    if (!trimmedEmail || !password.trim()) {
       Alert.alert("Error", "Please enter both email and password.");
       return;
     }
 
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      Alert.alert("Invalid Email", "Please enter a valid email address.");
+      return;
+    }
+
     setLoading(true);
-    const { error } = await signIn(email.trim(), password);
+    const { error } = await signIn(trimmedEmail, password);
     setLoading(false);
 
     if (error) {
@@ -40,6 +51,46 @@ export default function LoginScreen() {
     }
 
     router.replace("/(tabs)/feed");
+  };
+
+  const handleForgotPassword = async () => {
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      Alert.alert("Reset Password", "Enter your email address above, then tap Forgot password.");
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      Alert.alert("Invalid Email", "Please enter a valid email address.");
+      return;
+    }
+    const { error } = await supabase.auth.resetPasswordForEmail(trimmedEmail);
+    if (error) {
+      Alert.alert("Error", error.message);
+    } else {
+      Alert.alert("Check your inbox", `A password reset link has been sent to ${trimmedEmail}.`);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    const { error } = await signInWithGoogle();
+    setLoading(false);
+    if (error) {
+      if (!error.includes("cancelled")) Alert.alert("Google Sign In", error);
+    } else {
+      router.replace("/(tabs)/feed");
+    }
+  };
+
+  const handleAppleSignIn = async () => {
+    setLoading(true);
+    const { error } = await signInWithApple();
+    setLoading(false);
+    if (error) {
+      if (!error.includes("cancelled")) Alert.alert("Apple Sign In", error);
+    } else {
+      router.replace("/(tabs)/feed");
+    }
   };
 
   return (
@@ -53,10 +104,7 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled"
         >
           {/* Back Button */}
-          <Pressable
-            style={styles.backBtn}
-            onPress={() => router.back()}
-          >
+          <Pressable style={styles.backBtn} onPress={() => router.back()}>
             <ArrowLeft size={24} color={COLORS.white} />
           </Pressable>
 
@@ -102,22 +150,21 @@ export default function LoginScreen() {
               </Pressable>
             </View>
 
-            <Pressable style={styles.forgotBtn}>
+            <Pressable style={styles.forgotBtn} onPress={handleForgotPassword}>
               <Text style={styles.forgotText}>Forgot password?</Text>
             </Pressable>
 
+            {/* Sign In Button */}
             <Pressable
-              style={({ pressed }) => [
-                styles.loginBtn,
-                pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
-                loading && { opacity: 0.7 },
-              ]}
+              style={[styles.loginBtn, loading && { opacity: 0.7 }]}
               onPress={handleLogin}
               disabled={loading}
             >
-              <Text style={styles.loginBtnText}>
-                {loading ? "Signing in..." : "Sign In"}
-              </Text>
+              {loading ? (
+                <ActivityIndicator color={COLORS.white} />
+              ) : (
+                <Text style={styles.loginBtnText}>Sign In</Text>
+              )}
             </Pressable>
           </Animated.View>
 
@@ -130,11 +177,26 @@ export default function LoginScreen() {
 
           {/* Social Auth */}
           <Animated.View entering={FadeInDown.delay(300)} style={styles.socialBtns}>
-            <Pressable style={({ pressed }) => [styles.socialBtn, pressed && { opacity: 0.8 }]}>
-              <Text style={styles.socialBtnText}>Continue with Google</Text>
+            {/* Google */}
+            <Pressable
+              style={[styles.googleBtn, loading && { opacity: 0.7 }]}
+              onPress={handleGoogleSignIn}
+              disabled={loading}
+            >
+              <View style={styles.socialIconCircle}>
+                <GoogleIcon size={18} />
+              </View>
+              <Text style={styles.googleBtnText}>Continue with Google</Text>
             </Pressable>
-            <Pressable style={({ pressed }) => [styles.socialBtn, pressed && { opacity: 0.8 }]}>
-              <Text style={styles.socialBtnText}>Continue with Apple</Text>
+
+            {/* Apple */}
+            <Pressable
+              style={[styles.appleBtn, loading && { opacity: 0.7 }]}
+              onPress={handleAppleSignIn}
+              disabled={loading}
+            >
+              <AppleIcon size={22} color="#000000" />
+              <Text style={styles.appleBtnText}>Continue with Apple</Text>
             </Pressable>
           </Animated.View>
 
@@ -166,7 +228,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginTop: 8,
   },
-  logoSection: { alignItems: "center", paddingVertical: 40 },
+  logoSection: { alignItems: "center", paddingVertical: 32 },
   title: { fontSize: 28, fontWeight: "700", color: COLORS.white, marginTop: 16 },
   subtitle: { fontSize: 15, color: COLORS.textSecondary, marginTop: 8 },
   form: { gap: 14 },
@@ -191,9 +253,10 @@ const styles = StyleSheet.create({
   forgotText: { fontSize: 13, color: COLORS.coral, fontWeight: "500" },
   loginBtn: {
     backgroundColor: COLORS.coral,
-    paddingVertical: 16,
+    height: 54,
     borderRadius: 14,
     alignItems: "center",
+    justifyContent: "center",
     marginTop: 8,
   },
   loginBtnText: { fontSize: 16, fontWeight: "700", color: COLORS.white },
@@ -201,20 +264,41 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 16,
-    paddingVertical: 24,
+    paddingVertical: 20,
   },
   dividerLine: { flex: 1, height: 1, backgroundColor: "rgba(255,255,255,0.08)" },
   dividerText: { fontSize: 13, color: COLORS.textTertiary },
   socialBtns: { gap: 12 },
-  socialBtn: {
+  googleBtn: {
+    flexDirection: "row",
+    height: 54,
     backgroundColor: COLORS.darkSurface,
-    paddingVertical: 14,
     borderRadius: 14,
     alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
+    borderColor: "rgba(255,255,255,0.1)",
   },
-  socialBtnText: { fontSize: 15, fontWeight: "600", color: COLORS.white },
+  socialIconCircle: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  googleBtnText: { fontSize: 15, fontWeight: "600", color: COLORS.white },
+  appleBtn: {
+    flexDirection: "row",
+    height: 54,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+  },
+  appleBtnText: { fontSize: 15, fontWeight: "600", color: "#000000" },
   signupLink: { alignItems: "center", paddingTop: 24 },
   signupText: { fontSize: 14, color: COLORS.textSecondary },
 });

@@ -9,6 +9,10 @@ import {
   LayoutAnimation,
   Platform,
   UIManager,
+  TextInput,
+  Alert,
+  ActivityIndicator,
+  KeyboardAvoidingView,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -28,6 +32,9 @@ import {
   ShoppingCart,
   Trash2,
   X,
+  Truck,
+  ShoppingBag,
+  ExternalLink,
 } from "lucide-react-native";
 import { COLORS } from "@/lib/constants";
 import {
@@ -38,8 +45,12 @@ import {
 import { MenuItem, MenuCategory } from "@/types";
 import { useRestaurant } from "@/hooks/use-restaurants";
 import { useMenuCategories, useMenuItems } from "@/hooks/use-menu";
+import { usePlaceOrder } from "@/hooks/use-orders";
 import { formatCurrency } from "@/lib/utils";
 import { useCartStore } from "@/stores/cart-store";
+import { openRestaurantLink, trackReferral } from "@/lib/referral";
+import { useAuthStore } from "@/stores/auth-store";
+import { useToastStore } from "@/stores/toast-store";
 
 if (
   Platform.OS === "android" &&
@@ -271,7 +282,13 @@ const itemStyles = StyleSheet.create({
 
 // ─── Cart Summary ──────────────────────────────────────────────────────────
 
-function CartSummary({ onClose }: { onClose: () => void }) {
+function CartSummary({
+  onClose,
+  onCheckout,
+}: {
+  onClose: () => void;
+  onCheckout: () => void;
+}) {
   const { items, subtotal, tax, total, updateQuantity, removeItem, clearCart } =
     useCartStore();
   const router = useRouter();
@@ -356,12 +373,10 @@ function CartSummary({ onClose }: { onClose: () => void }) {
         </View>
 
         <Pressable
-          onPress={() => {
-            // In a real app, navigate to checkout
-            onClose();
-          }}
+          onPress={onCheckout}
           style={cartStyles.checkoutButton}
         >
+          <ShoppingCart size={18} color={COLORS.white} style={{ marginRight: 8 }} />
           <Text style={cartStyles.checkoutText}>Checkout</Text>
         </Pressable>
       </View>
@@ -506,6 +521,528 @@ const cartStyles = StyleSheet.create({
   },
 });
 
+// ─── Checkout Modal ─────────────────────────────────────────────────────────
+
+const TIP_OPTIONS = [
+  { label: "No Tip", pct: 0 },
+  { label: "15%", pct: 0.15 },
+  { label: "18%", pct: 0.18 },
+  { label: "20%", pct: 0.20 },
+];
+
+function CheckoutModal({ onClose, restaurant }: { onClose: () => void; restaurant: any }) {
+  const router = useRouter();
+  const {
+    items,
+    restaurantId,
+    orderType,
+    tip,
+    setOrderType,
+    setTip,
+    clearCart,
+    subtotal,
+    tax,
+    deliveryFee,
+    total,
+  } = useCartStore();
+  const { showToast } = useToastStore();
+  const { user } = useAuthStore();
+  const placeMutation = usePlaceOrder();
+
+  const [address, setAddress] = useState({
+    line1: "",
+    city: "",
+    state: "",
+    zip: "",
+  });
+  const [specialInstructions, setSpecialInstructions] = useState("");
+
+  const sub = subtotal();
+  const selectedTipPct =
+    sub > 0 ? Math.round((tip / sub) * 100) / 100 : 0;
+
+  const handlePlaceOrder = async () => {
+    if (orderType === "delivery" && !address.line1.trim()) {
+      Alert.alert("Address Required", "Please enter your delivery address.");
+      return;
+    }
+
+    const orderUrl = restaurant?.payment_url || restaurant?.website;
+
+    try {
+      // Save order to Supabase for tracking
+      await placeMutation.mutateAsync({
+        restaurantId: restaurantId!,
+        orderType,
+        items: items.map((item) => ({
+          menuItemId: item.menuItem.id,
+          quantity: item.quantity,
+          unitPrice: item.menuItem.price,
+          totalPrice: item.totalPrice,
+          customizations: item.customizations,
+          specialInstructions: item.specialInstructions || undefined,
+        })),
+        subtotal: sub,
+        tax: tax(),
+        deliveryFee: deliveryFee(),
+        tip,
+        total: total(),
+        deliveryAddress:
+          orderType === "delivery"
+            ? { line1: address.line1, city: address.city, state: address.state, zip: address.zip }
+            : undefined,
+        specialInstructions: specialInstructions.trim() || undefined,
+      });
+
+      // Track referral and redirect to restaurant site for payment
+      if (orderUrl) {
+        await openRestaurantLink({
+          url: orderUrl,
+          restaurantId: restaurantId!,
+          action: "order",
+          userId: user?.id,
+        });
+      } else {
+        // No website — track as referral anyway
+        await trackReferral({
+          restaurantId: restaurantId!,
+          action: "order",
+          userId: user?.id,
+          metadata: { total: total(), itemCount: items.length },
+        });
+      }
+
+      clearCart();
+      showToast(
+        orderUrl
+          ? "Order sent! Complete payment on restaurant site."
+          : "Order placed! Pay at the restaurant.",
+        "success"
+      );
+      router.push("/(tabs)/orders");
+    } catch (err: any) {
+      showToast(err.message || "Failed to place order", "error");
+    }
+  };
+
+  return (
+    <Animated.View
+      entering={SlideInDown.springify().damping(18)}
+      exiting={SlideOutDown.duration(200)}
+      style={checkoutStyles.overlay}
+    >
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={{ flex: 1 }}
+      >
+        <View style={checkoutStyles.handleBar} />
+        <ScrollView
+          style={checkoutStyles.scroll}
+          contentContainerStyle={checkoutStyles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Header */}
+          <View style={checkoutStyles.header}>
+            <Text style={checkoutStyles.title}>Checkout</Text>
+            <Pressable onPress={onClose} hitSlop={8}>
+              <X size={22} color={COLORS.textSecondary} />
+            </Pressable>
+          </View>
+
+          {/* Order Type */}
+          <Text style={checkoutStyles.sectionLabel}>Order Type</Text>
+          <View style={checkoutStyles.orderTypeRow}>
+            <Pressable
+              onPress={() => setOrderType("pickup")}
+              style={[
+                checkoutStyles.orderTypeBtn,
+                orderType === "pickup" && checkoutStyles.orderTypeBtnActive,
+              ]}
+            >
+              <ShoppingBag
+                size={18}
+                color={orderType === "pickup" ? COLORS.white : COLORS.textSecondary}
+              />
+              <Text
+                style={[
+                  checkoutStyles.orderTypeBtnText,
+                  orderType === "pickup" && checkoutStyles.orderTypeBtnTextActive,
+                ]}
+              >
+                Pickup
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setOrderType("delivery")}
+              style={[
+                checkoutStyles.orderTypeBtn,
+                orderType === "delivery" && checkoutStyles.orderTypeBtnActive,
+              ]}
+            >
+              <Truck
+                size={18}
+                color={orderType === "delivery" ? COLORS.white : COLORS.textSecondary}
+              />
+              <Text
+                style={[
+                  checkoutStyles.orderTypeBtnText,
+                  orderType === "delivery" && checkoutStyles.orderTypeBtnTextActive,
+                ]}
+              >
+                Delivery
+              </Text>
+            </Pressable>
+          </View>
+
+          {/* Delivery Address */}
+          {orderType === "delivery" && (
+            <Animated.View entering={FadeIn.duration(250)}>
+              <Text style={checkoutStyles.sectionLabel}>Delivery Address</Text>
+              <TextInput
+                style={checkoutStyles.input}
+                value={address.line1}
+                onChangeText={(v) => setAddress((a) => ({ ...a, line1: v }))}
+                placeholder="Street address"
+                placeholderTextColor={COLORS.textTertiary}
+              />
+              <View style={checkoutStyles.addressRow}>
+                <TextInput
+                  style={[checkoutStyles.input, { flex: 2 }]}
+                  value={address.city}
+                  onChangeText={(v) => setAddress((a) => ({ ...a, city: v }))}
+                  placeholder="City"
+                  placeholderTextColor={COLORS.textTertiary}
+                />
+                <TextInput
+                  style={[checkoutStyles.input, { flex: 1 }]}
+                  value={address.state}
+                  onChangeText={(v) => setAddress((a) => ({ ...a, state: v }))}
+                  placeholder="State"
+                  placeholderTextColor={COLORS.textTertiary}
+                  maxLength={2}
+                  autoCapitalize="characters"
+                />
+                <TextInput
+                  style={[checkoutStyles.input, { flex: 1.5 }]}
+                  value={address.zip}
+                  onChangeText={(v) => setAddress((a) => ({ ...a, zip: v }))}
+                  placeholder="ZIP"
+                  placeholderTextColor={COLORS.textTertiary}
+                  keyboardType="numeric"
+                  maxLength={5}
+                />
+              </View>
+            </Animated.View>
+          )}
+
+          {/* Tip */}
+          <Text style={checkoutStyles.sectionLabel}>Tip</Text>
+          <View style={checkoutStyles.tipRow}>
+            {TIP_OPTIONS.map((opt) => {
+              const tipAmt = sub * opt.pct;
+              const isSelected = Math.abs(tip - tipAmt) < 0.01;
+              return (
+                <Pressable
+                  key={opt.label}
+                  onPress={() => setTip(tipAmt)}
+                  style={[
+                    checkoutStyles.tipChip,
+                    isSelected && checkoutStyles.tipChipSelected,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      checkoutStyles.tipChipLabel,
+                      isSelected && checkoutStyles.tipChipLabelSelected,
+                    ]}
+                  >
+                    {opt.label}
+                  </Text>
+                  {opt.pct > 0 && (
+                    <Text
+                      style={[
+                        checkoutStyles.tipChipAmt,
+                        isSelected && checkoutStyles.tipChipLabelSelected,
+                      ]}
+                    >
+                      {formatCurrency(tipAmt)}
+                    </Text>
+                  )}
+                </Pressable>
+              );
+            })}
+          </View>
+
+          {/* Order Summary */}
+          <Text style={checkoutStyles.sectionLabel}>Order Summary</Text>
+          <View style={checkoutStyles.summaryCard}>
+            <View style={checkoutStyles.summaryRow}>
+              <Text style={checkoutStyles.summaryLabel}>Subtotal</Text>
+              <Text style={checkoutStyles.summaryValue}>{formatCurrency(sub)}</Text>
+            </View>
+            <View style={checkoutStyles.summaryRow}>
+              <Text style={checkoutStyles.summaryLabel}>Tax (8.75%)</Text>
+              <Text style={checkoutStyles.summaryValue}>{formatCurrency(tax())}</Text>
+            </View>
+            {orderType === "delivery" && (
+              <View style={checkoutStyles.summaryRow}>
+                <Text style={checkoutStyles.summaryLabel}>Delivery Fee</Text>
+                <Text style={checkoutStyles.summaryValue}>{formatCurrency(deliveryFee())}</Text>
+              </View>
+            )}
+            {tip > 0 && (
+              <View style={checkoutStyles.summaryRow}>
+                <Text style={checkoutStyles.summaryLabel}>Tip</Text>
+                <Text style={checkoutStyles.summaryValue}>{formatCurrency(tip)}</Text>
+              </View>
+            )}
+            <View style={checkoutStyles.summaryDivider} />
+            <View style={checkoutStyles.summaryRow}>
+              <Text style={checkoutStyles.summaryTotalLabel}>Total</Text>
+              <Text style={checkoutStyles.summaryTotalValue}>{formatCurrency(total())}</Text>
+            </View>
+          </View>
+
+          {/* Special Instructions */}
+          <Text style={checkoutStyles.sectionLabel}>Special Instructions</Text>
+          <TextInput
+            style={[checkoutStyles.input, checkoutStyles.textArea]}
+            value={specialInstructions}
+            onChangeText={setSpecialInstructions}
+            placeholder="Allergies, preferences, or notes..."
+            placeholderTextColor={COLORS.textTertiary}
+            multiline
+            numberOfLines={3}
+            maxLength={300}
+          />
+
+          {/* Place Order */}
+          <Pressable
+            onPress={handlePlaceOrder}
+            disabled={placeMutation.isPending}
+            style={[
+              checkoutStyles.placeOrderBtn,
+              placeMutation.isPending && checkoutStyles.placeOrderBtnDisabled,
+            ]}
+          >
+            {placeMutation.isPending ? (
+              <ActivityIndicator color={COLORS.white} />
+            ) : (
+              <View style={checkoutStyles.placeOrderBtnInner}>
+                {(restaurant?.payment_url || restaurant?.website) && (
+                  <ExternalLink size={18} color={COLORS.white} />
+                )}
+                <Text style={checkoutStyles.placeOrderBtnText}>
+                  {restaurant?.payment_url || restaurant?.website
+                    ? `Order & Pay on Site · ${formatCurrency(total())}`
+                    : `Place Order · ${formatCurrency(total())}`}
+                </Text>
+              </View>
+            )}
+          </Pressable>
+          {(restaurant?.payment_url || restaurant?.website) && (
+            <Text style={checkoutStyles.redirectNote}>
+              You'll be redirected to the restaurant's site to complete payment
+            </Text>
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </Animated.View>
+  );
+}
+
+const checkoutStyles = StyleSheet.create({
+  overlay: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: COLORS.darkSurface,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: "92%",
+    borderTopWidth: 1,
+    borderTopColor: COLORS.darkElevated,
+  },
+  handleBar: {
+    width: 40,
+    height: 4,
+    backgroundColor: COLORS.darkHover,
+    borderRadius: 2,
+    alignSelf: "center",
+    marginTop: 10,
+    marginBottom: 4,
+  },
+  scroll: { flex: 1 },
+  scrollContent: {
+    padding: 20,
+    paddingBottom: Platform.OS === "ios" ? 40 : 24,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 20,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: COLORS.white,
+  },
+  sectionLabel: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: COLORS.textSecondary,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 10,
+    marginTop: 4,
+  },
+  orderTypeRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 20,
+  },
+  orderTypeBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: COLORS.darkElevated,
+    borderWidth: 1.5,
+    borderColor: "transparent",
+  },
+  orderTypeBtnActive: {
+    backgroundColor: COLORS.coral,
+    borderColor: COLORS.coral,
+  },
+  orderTypeBtnText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: COLORS.textSecondary,
+  },
+  orderTypeBtnTextActive: {
+    color: COLORS.white,
+  },
+  input: {
+    backgroundColor: COLORS.darkElevated,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    color: COLORS.white,
+    fontSize: 14,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: COLORS.darkHover,
+  },
+  addressRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 4,
+  },
+  textArea: {
+    height: 80,
+    textAlignVertical: "top",
+    marginBottom: 20,
+  },
+  tipRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 20,
+  },
+  tipChip: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: COLORS.darkElevated,
+    borderWidth: 1.5,
+    borderColor: "transparent",
+    gap: 2,
+  },
+  tipChipSelected: {
+    borderColor: COLORS.coral,
+    backgroundColor: "rgba(16,185,129,0.12)",
+  },
+  tipChipLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: COLORS.textSecondary,
+  },
+  tipChipAmt: {
+    fontSize: 10,
+    color: COLORS.textTertiary,
+  },
+  tipChipLabelSelected: {
+    color: COLORS.coral,
+  },
+  summaryCard: {
+    backgroundColor: COLORS.darkElevated,
+    borderRadius: 12,
+    padding: 14,
+    gap: 8,
+    marginBottom: 20,
+  },
+  summaryRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  summaryLabel: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+  },
+  summaryValue: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    fontWeight: "600",
+  },
+  summaryDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: COLORS.darkHover,
+    marginVertical: 2,
+  },
+  summaryTotalLabel: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: COLORS.white,
+  },
+  summaryTotalValue: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: COLORS.white,
+  },
+  placeOrderBtn: {
+    backgroundColor: COLORS.coral,
+    borderRadius: 14,
+    paddingVertical: 16,
+    alignItems: "center",
+  },
+  placeOrderBtnDisabled: {
+    opacity: 0.6,
+  },
+  placeOrderBtnInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  placeOrderBtnText: {
+    color: COLORS.white,
+    fontWeight: "700",
+    fontSize: 16,
+  },
+  redirectNote: {
+    color: COLORS.textTertiary,
+    fontSize: 12,
+    textAlign: "center",
+    marginTop: 8,
+  },
+});
+
 // ─── Main Screen ───────────────────────────────────────────────────────────
 
 type SectionData = {
@@ -519,6 +1056,7 @@ export default function OrderScreen() {
   const router = useRouter();
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const [showCart, setShowCart] = useState(false);
+  const [showCheckout, setShowCheckout] = useState(false);
   const [activeCategoryId, setActiveCategoryId] = useState("");
   const sectionListRef = useRef<SectionList<MenuItem, SectionData>>(null);
 
@@ -736,7 +1274,17 @@ export default function OrderScreen() {
       )}
 
       {/* Cart Summary */}
-      {showCart && <CartSummary onClose={() => setShowCart(false)} />}
+      {showCart && !showCheckout && (
+        <CartSummary
+          onClose={() => setShowCart(false)}
+          onCheckout={() => setShowCheckout(true)}
+        />
+      )}
+
+      {/* Checkout Modal */}
+      {showCheckout && (
+        <CheckoutModal onClose={() => setShowCheckout(false)} restaurant={restaurant} />
+      )}
     </View>
   );
 }

@@ -30,8 +30,11 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files
-.env*.local
+# local env files — never commit real secrets
+.env
+.env.*
+!.env.example
+secrets/
 
 # typescript
 *.tsbuildinfo
@@ -39,3 +42,9 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# screenshots & temp
+screen.png
+screen2.png
+supabase/.temp/
+.claude/

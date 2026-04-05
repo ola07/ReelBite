@@ -13,8 +13,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Video, ResizeMode } from "expo-av";
 import * as ImagePicker from "expo-image-picker";
-import { ArrowLeft, Upload, VideoIcon, X } from "lucide-react-native";
+import { ArrowLeft, Upload, VideoIcon, X, Search, MapPin } from "lucide-react-native";
 import { COLORS, CUISINES } from "@/lib/constants";
+import { MOCK_RESTAURANTS } from "@/lib/mock-data";
 import { useUploadVideo } from "@/hooks/use-upload";
 import { useToastStore } from "@/stores/toast-store";
 
@@ -28,6 +29,18 @@ export default function UploadScreen() {
   const [description, setDescription] = useState("");
   const [tagsInput, setTagsInput] = useState("");
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
+  const [restaurantSearch, setRestaurantSearch] = useState("");
+  const [selectedRestaurantId, setSelectedRestaurantId] = useState<string | null>(null);
+
+  const selectedRestaurant = selectedRestaurantId
+    ? MOCK_RESTAURANTS.find((r) => r.id === selectedRestaurantId)
+    : null;
+
+  const filteredRestaurants = restaurantSearch.trim()
+    ? MOCK_RESTAURANTS.filter((r) =>
+        r.name.toLowerCase().includes(restaurantSearch.toLowerCase())
+      ).slice(0, 6)
+    : [];
 
   const pickVideo = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -61,6 +74,7 @@ export default function UploadScreen() {
         title: title.trim(),
         description: description.trim() || undefined,
         cuisineTags: selectedCuisines.length > 0 ? selectedCuisines : undefined,
+        restaurantId: selectedRestaurantId || undefined,
       });
       showToast("Video uploaded successfully!", "success");
       router.back();
@@ -150,6 +164,57 @@ export default function UploadScreen() {
             </Pressable>
           ))}
         </View>
+
+        {/* Restaurant Tag */}
+        <Text style={styles.label}>Tag a Restaurant (optional)</Text>
+        {selectedRestaurant ? (
+          <View style={styles.selectedRestaurant}>
+            <MapPin size={14} color={COLORS.coral} />
+            <Text style={styles.selectedRestaurantName}>{selectedRestaurant.name}</Text>
+            <Pressable
+              onPress={() => {
+                setSelectedRestaurantId(null);
+                setRestaurantSearch("");
+              }}
+              hitSlop={8}
+            >
+              <X size={16} color={COLORS.textSecondary} />
+            </Pressable>
+          </View>
+        ) : (
+          <>
+            <View style={styles.searchRow}>
+              <Search size={16} color={COLORS.textTertiary} />
+              <TextInput
+                style={styles.searchInput}
+                value={restaurantSearch}
+                onChangeText={setRestaurantSearch}
+                placeholder="Search restaurants..."
+                placeholderTextColor={COLORS.textTertiary}
+              />
+            </View>
+            {filteredRestaurants.length > 0 && (
+              <View style={styles.restaurantList}>
+                {filteredRestaurants.map((r) => (
+                  <Pressable
+                    key={r.id}
+                    style={styles.restaurantOption}
+                    onPress={() => {
+                      setSelectedRestaurantId(r.id);
+                      setRestaurantSearch("");
+                    }}
+                  >
+                    <MapPin size={14} color={COLORS.textTertiary} />
+                    <Text style={styles.restaurantOptionName}>{r.name}</Text>
+                    <Text style={styles.restaurantOptionCuisine}>{r.cuisine_type}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+          </>
+        )}
+
+        <View style={{ height: 20 }} />
 
         {/* Upload Button */}
         <Pressable
@@ -305,5 +370,69 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontSize: 16,
     fontWeight: "700",
+  },
+
+  // Restaurant picker
+  searchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: COLORS.darkSurface,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: COLORS.darkHover,
+    marginBottom: 8,
+  },
+  searchInput: {
+    flex: 1,
+    color: COLORS.white,
+    fontSize: 14,
+  },
+  restaurantList: {
+    backgroundColor: COLORS.darkSurface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.darkHover,
+    overflow: "hidden",
+    marginBottom: 4,
+  },
+  restaurantOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: COLORS.darkElevated,
+  },
+  restaurantOptionName: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "600",
+    color: COLORS.white,
+  },
+  restaurantOptionCuisine: {
+    fontSize: 12,
+    color: COLORS.textTertiary,
+  },
+  selectedRestaurant: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "rgba(16,185,129,0.12)",
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: COLORS.coral,
+    marginBottom: 4,
+  },
+  selectedRestaurantName: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "600",
+    color: COLORS.coral,
   },
 });

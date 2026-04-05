@@ -23,6 +23,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { COLORS } from "@/lib/constants";
 import { formatCurrency, formatCount } from "@/lib/utils";
 import { AFFILIATE_RATES } from "@/lib/mock-data";
+import { useCreatorReferralStats, useCreatorRecentReferrals } from "@/hooks/use-referrals";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -58,11 +59,31 @@ const TOP_VIDEOS = [
   { id: "tv3", title: "Omakase Experience", views: 89300, earnings: 3560, conversionRate: 5.1 },
 ];
 
+function getNextPayoutDate(): string {
+  const now = new Date();
+  const next = new Date(now.getFullYear(), now.getMonth() + 1, 21);
+  return next.toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 export default function EarningsScreen() {
   const router = useRouter();
   const [period, setPeriod] = useState<TimePeriod>("30d");
-  const data = EARNINGS_DATA[period];
+  const periodDays = period === "7d" ? 7 : period === "30d" ? 30 : period === "90d" ? 90 : undefined;
+  const { data: realStats } = useCreatorReferralStats(periodDays);
+  const { data: realRecent } = useCreatorRecentReferrals();
+
+  // Use real data if available, otherwise fall back to mock
+  const mockData = EARNINGS_DATA[period];
+  const data = realStats && realStats.totalReferrals > 0
+    ? { total: realStats.totalEarnings, change: 0, orders: realStats.orderCount, views: realStats.totalReferrals }
+    : mockData;
   const isPositive = data.change >= 0;
+  const nextPayoutDate = getNextPayoutDate();
+  const nextPayoutAmount = EARNINGS_DATA["7d"].total;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -147,8 +168,8 @@ export default function EarningsScreen() {
               <TrendingUp size={18} color={COLORS.success} />
             </View>
             <Text style={styles.statValue}>
-              {data.orders > 0
-                ? ((data.total / data.orders) * 100 / data.total * data.orders / data.orders).toFixed(1)
+              {data.views > 0
+                ? ((data.orders / data.views) * 100).toFixed(1)
                 : "0"}%
             </Text>
             <Text style={styles.statLabel}>Conv. Rate</Text>
@@ -236,8 +257,8 @@ export default function EarningsScreen() {
             <Calendar size={18} color={COLORS.coral} />
             <Text style={styles.payoutTitle}>Next Payout</Text>
           </View>
-          <Text style={styles.payoutAmount}>{formatCurrency(342.50)}</Text>
-          <Text style={styles.payoutDate}>March 21, 2026</Text>
+          <Text style={styles.payoutAmount}>{formatCurrency(nextPayoutAmount)}</Text>
+          <Text style={styles.payoutDate}>{nextPayoutDate}</Text>
           <View style={styles.payoutProgress}>
             <View style={[styles.payoutBar, { width: "75%" }]} />
           </View>

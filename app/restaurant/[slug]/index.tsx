@@ -28,6 +28,8 @@ import {
 } from "@/lib/mock-data";
 import { MenuItem, ReviewWithProfile, MenuCategory } from "@/types";
 import { useRestaurant } from "@/hooks/use-restaurants";
+import { useAuthStore } from "@/stores/auth-store";
+import { openRestaurantLink, callRestaurant, getDirections, trackReferral } from "@/lib/referral";
 import { useMenuCategories, useMenuItems } from "@/hooks/use-menu";
 import { useReviews } from "@/hooks/use-reviews";
 import { formatCurrency, formatRelativeTime } from "@/lib/utils";
@@ -270,22 +272,62 @@ function AboutTab({
         </View>
       </View>
 
-      {/* Contact */}
+      {/* Contact — all taps tracked as referrals */}
       <View style={styles.aboutSection}>
         <Text style={styles.aboutSectionTitle}>Contact</Text>
         {restaurant.phone && (
-          <View style={styles.aboutInfoRow}>
-            <Phone size={18} color={COLORS.textSecondary} />
-            <Text style={styles.aboutInfoText}>{restaurant.phone}</Text>
-          </View>
+          <Pressable
+            style={styles.aboutInfoRow}
+            onPress={() =>
+              callRestaurant({
+                phone: restaurant.phone!,
+                restaurantId: restaurant.id,
+                userId: useAuthStore.getState().user?.id,
+              })
+            }
+          >
+            <Phone size={18} color={COLORS.coral} />
+            <Text style={[styles.aboutInfoText, { color: COLORS.coral }]}>
+              {restaurant.phone}
+            </Text>
+          </Pressable>
         )}
         {restaurant.website && (
-          <View style={styles.aboutInfoRow}>
-            <Globe size={18} color={COLORS.textSecondary} />
-            <Text style={styles.aboutInfoText}>{restaurant.website}</Text>
-          </View>
+          <Pressable
+            style={styles.aboutInfoRow}
+            onPress={() =>
+              openRestaurantLink({
+                url: restaurant.website!,
+                restaurantId: restaurant.id,
+                action: "website",
+                userId: useAuthStore.getState().user?.id,
+              })
+            }
+          >
+            <Globe size={18} color={COLORS.coral} />
+            <Text style={[styles.aboutInfoText, { color: COLORS.coral }]}>
+              {restaurant.website}
+            </Text>
+          </Pressable>
         )}
       </View>
+
+      {/* Directions — tracked */}
+      <Pressable
+        style={styles.directionsBtn}
+        onPress={() =>
+          getDirections({
+            latitude: restaurant.latitude,
+            longitude: restaurant.longitude,
+            name: restaurant.name,
+            restaurantId: restaurant.id,
+            userId: useAuthStore.getState().user?.id,
+          })
+        }
+      >
+        <MapPin size={18} color={COLORS.white} />
+        <Text style={styles.directionsBtnText}>Get Directions</Text>
+      </Pressable>
     </View>
   );
 }
@@ -813,6 +855,21 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     lineHeight: 22,
     flex: 1,
+  },
+  directionsBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: COLORS.coral,
+    paddingVertical: 14,
+    borderRadius: 14,
+    marginTop: 8,
+  },
+  directionsBtnText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: COLORS.white,
   },
 
   // Error
