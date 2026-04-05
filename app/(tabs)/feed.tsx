@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
+import { useRouter } from "expo-router";
 import { COLORS } from "@/lib/constants";
 import { MOCK_VIDEOS, VIDEO_COMMUNITY_BADGES, VIDEO_REVIEWS, CREATOR_TIERS } from "@/lib/mock-data";
 import { useFeedStore } from "@/stores/feed-store";
@@ -21,10 +22,12 @@ import ReviewCard from "@/components/feed/ReviewCard";
 import CriticBadge from "@/components/creator/CriticBadge";
 import { FeedSkeleton } from "@/components/shared/SkeletonLoader";
 import { useVideos, useToggleLike, useToggleBookmark } from "@/hooks";
+import { shareVideo } from "@/lib/share";
 
 const TAB_BAR_HEIGHT = Platform.OS === "ios" ? 90 : 80;
 
 export default function FeedScreen() {
+  const router = useRouter();
   const { width, height } = useWindowDimensions();
   const cardHeight = height - TAB_BAR_HEIGHT;
 
@@ -92,9 +95,38 @@ export default function FeedScreen() {
   );
 
   const handleComment = useCallback((_videoId: string) => {}, []);
-  const handleShare = useCallback((_videoId: string) => {}, []);
-  const handlePressRestaurant = useCallback((_restaurantId: string) => {}, []);
-  const handlePressCreator = useCallback((_creatorId: string) => {}, []);
+  const handleShare = useCallback(
+    (videoId: string) => {
+      const video = videos.find((v) => v.id === videoId);
+      if (video) {
+        shareVideo({
+          title: video.title || "Check this out",
+          creatorUsername: video.creator.username,
+          restaurantName: video.restaurant?.name ?? "Restaurant",
+          videoId: video.id,
+        });
+      }
+    },
+    [videos]
+  );
+  const handlePressRestaurant = useCallback(
+    (restaurantId: string) => {
+      const video = videos.find((v) => v.restaurant?.id === restaurantId);
+      if (video?.restaurant?.slug) {
+        router.push(`/restaurant/${video.restaurant.slug}` as any);
+      }
+    },
+    [videos, router]
+  );
+  const handlePressCreator = useCallback(
+    (creatorId: string) => {
+      const video = videos.find((v) => v.creator.id === creatorId);
+      if (video?.creator.username) {
+        router.push(`/creator/${video.creator.username}` as any);
+      }
+    },
+    [videos, router]
+  );
 
   const renderItem = useCallback(
     ({ item, index }: { item: VideoWithDetails; index: number }) => {

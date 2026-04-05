@@ -1,7 +1,7 @@
 import { Tabs } from "expo-router";
 import { View, Text, Pressable, StyleSheet, Platform } from "react-native";
 import { BlurView } from "expo-blur";
-import { Flame, Search, Sparkles, ShoppingBag, User } from "lucide-react-native";
+import { Flame, Search, Briefcase, ShoppingBag, User } from "lucide-react-native";
 import { COLORS } from "@/lib/constants";
 import * as Haptics from "expo-haptics";
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from "react-native-reanimated";
@@ -29,7 +29,7 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
             const icons: Record<string, any> = {
               feed: Flame,
               explore: Search,
-              discover: Sparkles,
+              campaigns: Briefcase,
               orders: ShoppingBag,
               profile: User,
             };
@@ -92,8 +92,8 @@ export default function TabLayout() {
         options={{ title: "Explore", tabBarLabel: "Explore" }}
       />
       <Tabs.Screen
-        name="discover"
-        options={{ title: "Discover", tabBarLabel: "Discover" }}
+        name="campaigns"
+        options={{ title: "Campaigns", tabBarLabel: "Campaigns" }}
       />
       <Tabs.Screen
         name="orders"

@@ -21,6 +21,8 @@ import {
 } from "lucide-react-native";
 import { COLORS } from "@/lib/constants";
 import { useAuthStore } from "@/stores/auth-store";
+import { supabase } from "@/lib/supabase";
+import { useQuery } from "@tanstack/react-query";
 
 function StatItem({ value, label }: { value: number; label: string }) {
   return (
@@ -62,6 +64,26 @@ function MenuLink({
 export default function ProfileScreen() {
   const { profile, user, signOut } = useAuthStore();
 
+  const { data: stats } = useQuery({
+    queryKey: ["profile-stats", user?.id],
+    queryFn: async () => {
+      if (!user) return { favorites: 0, reservations: 0, orders: 0, reviews: 0 };
+      const [likes, reservations, orders, reviews] = await Promise.all([
+        supabase.from("likes").select("video_id", { count: "exact", head: true }).eq("user_id", user.id),
+        supabase.from("reservations").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+        supabase.from("orders").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+        supabase.from("reviews").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+      ]);
+      return {
+        favorites: likes.count ?? 0,
+        reservations: reservations.count ?? 0,
+        orders: orders.count ?? 0,
+        reviews: reviews.count ?? 0,
+      };
+    },
+    enabled: !!user,
+  });
+
   const displayName = profile?.display_name || profile?.username || user?.email?.split("@")[0] || "User";
   const username = profile?.username || user?.email?.split("@")[0] || "user";
   const memberSince = user?.created_at
@@ -94,13 +116,13 @@ export default function ProfileScreen() {
 
         {/* Stats */}
         <View style={styles.statsRow}>
-          <StatItem value={0} label="Favorites" />
+          <StatItem value={stats?.favorites ?? 0} label="Favorites" />
           <View style={styles.statDivider} />
-          <StatItem value={0} label="Reservations" />
+          <StatItem value={stats?.reservations ?? 0} label="Reservations" />
           <View style={styles.statDivider} />
-          <StatItem value={0} label="Orders" />
+          <StatItem value={stats?.orders ?? 0} label="Orders" />
           <View style={styles.statDivider} />
-          <StatItem value={0} label="Reviews" />
+          <StatItem value={stats?.reviews ?? 0} label="Reviews" />
         </View>
 
         {/* Taste Profile */}

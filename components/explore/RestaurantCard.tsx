@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { View, Text, Pressable, StyleSheet, Image } from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -48,16 +48,24 @@ export default function RestaurantCard({
         onPressOut={handlePressOut}
         style={[styles.compactCard, animatedStyle]}
       >
-        <LinearGradient
-          colors={[COLORS.coral, COLORS.amber]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.compactImage}
-        >
-          <Text style={styles.compactImageText}>
-            {restaurant.name.charAt(0)}
-          </Text>
-        </LinearGradient>
+        {restaurant.cover_image_url ? (
+          <Image
+            source={{ uri: restaurant.cover_image_url }}
+            style={styles.compactImage}
+            resizeMode="cover"
+          />
+        ) : (
+          <LinearGradient
+            colors={[COLORS.coral, COLORS.amber]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.compactImage}
+          >
+            <Text style={styles.compactImageText}>
+              {restaurant.name.charAt(0)}
+            </Text>
+          </LinearGradient>
+        )}
         <View style={styles.compactInfo}>
           <Text style={styles.compactName} numberOfLines={1}>
             {restaurant.name}
@@ -80,16 +88,24 @@ export default function RestaurantCard({
       onPressOut={handlePressOut}
       style={[styles.card, animatedStyle]}
     >
-      <LinearGradient
-        colors={[COLORS.coralDark, COLORS.coral, COLORS.amber]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.imagePlaceholder}
-      >
-        <Text style={styles.imagePlaceholderText}>
-          {restaurant.name.charAt(0)}
-        </Text>
-      </LinearGradient>
+      {restaurant.cover_image_url ? (
+        <Image
+          source={{ uri: restaurant.cover_image_url }}
+          style={styles.imagePlaceholder}
+          resizeMode="cover"
+        />
+      ) : (
+        <LinearGradient
+          colors={[COLORS.coralDark, COLORS.coral, COLORS.amber]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.imagePlaceholder}
+        >
+          <Text style={styles.imagePlaceholderText}>
+            {restaurant.name.charAt(0)}
+          </Text>
+        </LinearGradient>
+      )}
 
       <View style={styles.info}>
         <View style={styles.infoTop}>
