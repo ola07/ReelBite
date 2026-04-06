@@ -9,12 +9,14 @@ export interface OnboardingState {
   totalSteps: number;
 
   // Quiz answers
+  role: "foodie" | "creator" | "restaurant";
   discoveryMethod: string;
   cuisines: string[];
   vibes: string[];
   budget: number; // 1-4
   dietary: string[];
   cravings: string[];
+  contentStyles: string[];
 
   // Actions
   setStep: (step: number) => void;
@@ -31,12 +33,14 @@ const INITIAL = {
   completed: false,
   step: 0,
   totalSteps: 12,
+  role: "foodie" as const,
   discoveryMethod: "",
   cuisines: [],
   vibes: [],
   budget: 2,
   dietary: [],
   cravings: [],
+  contentStyles: [],
 };
 
 export const useOnboardingStore = create<OnboardingState>((set, get) => ({
