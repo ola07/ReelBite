@@ -18,6 +18,7 @@ import {
   MapPin,
   Star,
   Sparkles,
+  Pencil,
 } from "lucide-react-native";
 import { COLORS } from "@/lib/constants";
 import { useAuthStore } from "@/stores/auth-store";
@@ -112,6 +113,13 @@ export default function ProfileScreen() {
           <Text style={styles.memberSince}>
             <MapPin size={12} color={COLORS.textSecondary} /> Member since {memberSince}
           </Text>
+          <Pressable
+            style={styles.editProfileBtn}
+            onPress={() => router.push("/edit-profile" as any)}
+          >
+            <Pencil size={14} color={COLORS.coral} />
+            <Text style={styles.editProfileText}>Edit Profile</Text>
+          </Pressable>
         </View>
 
         {/* Stats */}
@@ -227,6 +235,21 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: COLORS.textTertiary,
     marginTop: 8,
+  },
+  editProfileBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 12,
+    backgroundColor: "rgba(16,185,129,0.12)",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 10,
+  },
+  editProfileText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: COLORS.coral,
   },
   statsRow: {
     flexDirection: "row",

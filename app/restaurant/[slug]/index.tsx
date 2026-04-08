@@ -6,6 +6,7 @@ import {
   Pressable,
   StyleSheet,
   Platform,
+  Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -373,19 +374,26 @@ export default function RestaurantProfileScreen() {
       >
         {/* Hero Section */}
         <View style={styles.hero}>
-          <LinearGradient
-            colors={[COLORS.coralDark, COLORS.coral, COLORS.amber]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.heroGradient}
-          >
-            {/* Overlay gradient for text readability */}
+          {restaurant.cover_image_url ? (
+            <Image
+              source={{ uri: restaurant.cover_image_url }}
+              style={styles.heroGradient}
+              resizeMode="cover"
+            />
+          ) : (
             <LinearGradient
-              colors={["transparent", "rgba(0,0,0,0.7)"]}
-              style={styles.heroOverlay}
-            >
-              <Text style={styles.heroName}>{restaurant.name}</Text>
-            </LinearGradient>
+              colors={[COLORS.coralDark, COLORS.coral, COLORS.amber]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.heroGradient}
+            />
+          )}
+          {/* Overlay gradient for text readability */}
+          <LinearGradient
+            colors={["transparent", "rgba(0,0,0,0.8)"]}
+            style={[styles.heroOverlay, StyleSheet.absoluteFill]}
+          >
+            <Text style={styles.heroName}>{restaurant.name}</Text>
           </LinearGradient>
 
           {/* Back Button */}

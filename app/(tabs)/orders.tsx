@@ -142,7 +142,7 @@ export default function OrdersScreen() {
         orderNumber: o.order_number,
       }));
     }
-    return activeTab === "active" ? MOCK_ACTIVE_ORDERS : MOCK_PAST_ORDERS;
+    return [];
   }, [realOrders, activeTab]);
 
   return (

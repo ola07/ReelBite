@@ -21,6 +21,7 @@ import CommunityBadge from "@/components/feed/CommunityBadge";
 import ReviewCard from "@/components/feed/ReviewCard";
 import CriticBadge from "@/components/creator/CriticBadge";
 import { FeedSkeleton } from "@/components/shared/SkeletonLoader";
+import ErrorState from "@/components/shared/ErrorState";
 import { useVideos, useToggleLike, useToggleBookmark } from "@/hooks";
 import { shareVideo } from "@/lib/share";
 
@@ -36,7 +37,7 @@ export default function FeedScreen() {
   const [activeCategory, setActiveCategory] = useState<FeedCategory>("for_you");
 
   // Fetch real data, fall back to mock data
-  const { data: videoPages, isLoading, fetchNextPage, hasNextPage } = useVideos(activeCategory);
+  const { data: videoPages, isLoading, isError, refetch, fetchNextPage, hasNextPage } = useVideos(activeCategory);
   const toggleLike = useToggleLike();
   const toggleBookmark = useToggleBookmark();
 
@@ -199,6 +200,15 @@ export default function FeedScreen() {
       <View style={styles.container}>
         <StatusBar style="light" />
         <FeedSkeleton />
+      </View>
+    );
+  }
+
+  if (isError && filteredVideos.length === 0) {
+    return (
+      <View style={styles.container}>
+        <StatusBar style="light" />
+        <ErrorState message="Couldn't load videos" onRetry={() => refetch()} />
       </View>
     );
   }
