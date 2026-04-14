@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ReelBite — Discover Restaurants Through Video</title>
+  <meta name="description" content="TikTok meets restaurant discovery. Watch real food reviews, order, and reserve — all in one app. Free for restaurants. Creators get paid.">
+  <meta property="og:title" content="ReelBite — Discover Restaurants Through Video">
+  <meta property="og:description" content="Watch real food reviews. Order & reserve in seconds. Creators get paid to eat.">
+  <meta property="og:type" content="website">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: #060E0B;
+      color: #ffffff;
+      overflow-x: hidden;
+    }
+
+    /* Hero */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 24px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle at 50% 50%, rgba(16,185,129,0.08) 0%, transparent 50%);
+      animation: pulse 8s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 0.5; }
+      50% { transform: scale(1.1); opacity: 1; }
+    }
+
+    .hero-content { position: relative; z-index: 1; max-width: 600px; }
+
+    .logo-badge {
+      width: 80px;
+      height: 80px;
+      border-radius: 24px;
+      background: linear-gradient(135deg, #10B981, #059669);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 24px;
+      font-size: 36px;
+    }
+
+    .hero h1 {
+      font-size: 48px;
+      font-weight: 900;
+      letter-spacing: -1px;
+      margin-bottom: 8px;
+    }
+
+    .hero h1 span { color: #10B981; }
+
+    .hero .tagline {
+      font-size: 20px;
+      color: rgba(255,255,255,0.6);
+      font-weight: 500;
+      margin-bottom: 40px;
+      line-height: 1.5;
+    }
+
+    .cta-buttons {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 48px;
+    }
+
+    .btn {
+      padding: 16px 32px;
+      border-radius: 14px;
+      font-size: 16px;
+      font-weight: 700;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: transform 0.2s, opacity 0.2s;
+      cursor: pointer;
+      border: none;
+    }
+
+    .btn:hover { transform: translateY(-2px); }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #10B981, #059669);
+      color: white;
+    }
+
+    .btn-secondary {
+      background: rgba(255,255,255,0.08);
+      color: white;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .social-proof {
+      display: flex;
+      gap: 32px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .proof-item { text-align: center; }
+    .proof-number { font-size: 24px; font-weight: 800; color: #10B981; }
+    .proof-label { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 4px; }
+
+    /* How It Works */
+    .section {
+      padding: 80px 24px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    .section-title {
+      font-size: 36px;
+      font-weight: 800;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+
+    .section-subtitle {
+      font-size: 16px;
+      color: rgba(255,255,255,0.5);
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    /* Three columns for audiences */
+    .audience-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 24px;
+      margin-bottom: 60px;
+    }
+
+    .audience-card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 20px;
+      padding: 32px 24px;
+      text-align: center;
+    }
+
+    .audience-card .icon {
+      width: 60px;
+      height: 60px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+      font-size: 28px;
+    }
+
+    .audience-card h3 {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    .audience-card ul {
+      list-style: none;
+      text-align: left;
+      space-y: 8px;
+    }
+
+    .audience-card li {
+      font-size: 14px;
+      color: rgba(255,255,255,0.6);
+      padding: 6px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .audience-card li::before {
+      content: '✓';
+      color: #10B981;
+      font-weight: 700;
+    }
+
+    .card-restaurants .icon { background: rgba(16,185,129,0.15); }
+    .card-creators .icon { background: rgba(59,130,246,0.15); }
+    .card-foodies .icon { background: rgba(245,158,11,0.15); }
+
+    /* Steps */
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 24px;
+    }
+
+    .step {
+      text-align: center;
+      padding: 24px;
+    }
+
+    .step-number {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      background: rgba(16,185,129,0.15);
+      color: #10B981;
+      font-size: 20px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+    }
+
+    .step h4 { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+    .step p { font-size: 13px; color: rgba(255,255,255,0.5); line-height: 1.5; }
+
+    /* Sign Up Form */
+    .signup-section {
+      padding: 80px 24px;
+      text-align: center;
+      background: rgba(16,185,129,0.03);
+      border-top: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .form-container {
+      max-width: 480px;
+      margin: 0 auto;
+    }
+
+    .form-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 32px;
+      justify-content: center;
+    }
+
+    .form-tab {
+      padding: 10px 24px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      background: rgba(255,255,255,0.06);
+      color: rgba(255,255,255,0.5);
+      transition: all 0.2s;
+    }
+
+    .form-tab.active {
+      background: #10B981;
+      color: white;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+      text-align: left;
+    }
+
+    .form-group label {
+      font-size: 13px;
+      font-weight: 600;
+      color: rgba(255,255,255,0.5);
+      margin-bottom: 6px;
+      display: block;
+    }
+
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.04);
+      color: white;
+      font-size: 15px;
+      font-family: 'Inter', sans-serif;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+      border-color: #10B981;
+    }
+
+    .form-group input::placeholder, .form-group textarea::placeholder {
+      color: rgba(255,255,255,0.25);
+    }
+
+    .form-group select option { background: #0a0a0a; }
+
+    .submit-btn {
+      width: 100%;
+      padding: 16px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #10B981, #059669);
+      color: white;
+      font-size: 16px;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: transform 0.2s;
+    }
+
+    .submit-btn:hover { transform: translateY(-2px); }
+
+    .form-note {
+      font-size: 12px;
+      color: rgba(255,255,255,0.3);
+      margin-top: 12px;
+    }
+
+    /* Success message */
+    .success-msg {
+      display: none;
+      padding: 20px;
+      border-radius: 14px;
+      background: rgba(16,185,129,0.15);
+      border: 1px solid rgba(16,185,129,0.3);
+      text-align: center;
+    }
+
+    .success-msg h3 { color: #10B981; margin-bottom: 8px; }
+    .success-msg p { color: rgba(255,255,255,0.6); font-size: 14px; }
+
+    /* Footer */
+    footer {
+      padding: 40px 24px;
+      text-align: center;
+      border-top: 1px solid rgba(255,255,255,0.06);
+    }
+
+    footer p {
+      font-size: 13px;
+      color: rgba(255,255,255,0.3);
+    }
+
+    footer a { color: #10B981; text-decoration: none; }
+
+    /* Mobile */
+    @media (max-width: 640px) {
+      .hero h1 { font-size: 32px; }
+      .hero .tagline { font-size: 16px; }
+      .section-title { font-size: 28px; }
+      .social-proof { gap: 20px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-content">
+      <div class="logo-badge">🔥</div>
+      <h1>Reel<span>Bite</span></h1>
+      <p class="tagline">
+        Discover restaurants through short-form video reviews.<br>
+        Order & reserve in seconds. Creators get paid to eat.
+      </p>
+      <div class="cta-buttons">
+        <a href="#signup" class="btn btn-primary">🍴 List Your Restaurant — Free</a>
+        <a href="#signup" class="btn btn-secondary">🎬 Join as Creator</a>
+      </div>
+      <div class="social-proof">
+        <div class="proof-item">
+          <div class="proof-number">10K+</div>
+          <div class="proof-label">Restaurants</div>
+        </div>
+        <div class="proof-item">
+          <div class="proof-number">50K+</div>
+          <div class="proof-label">Food Lovers</div>
+        </div>
+        <div class="proof-item">
+          <div class="proof-number">$2,400</div>
+          <div class="proof-label">Avg Creator Earnings/mo</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Who It's For -->
+  <section class="section">
+    <h2 class="section-title">Built for Everyone in Food</h2>
+    <p class="section-subtitle">Whether you own a restaurant, create content, or just love food</p>
+
+    <div class="audience-grid">
+      <div class="audience-card card-restaurants">
+        <div class="icon">🏪</div>
+        <h3>Restaurant Owners</h3>
+        <ul>
+          <li>Get free video reviews from food creators</li>
+          <li>Track every customer ReelBite sends you</li>
+          <li>Launch paid campaigns for more exposure</li>
+          <li>No commissions on your food sales — ever</li>
+        </ul>
+      </div>
+      <div class="audience-card card-creators">
+        <div class="icon">🎬</div>
+        <h3>Food Creators</h3>
+        <ul>
+          <li>Get paid $50-$100 per video review</li>
+          <li>Earn commission on every order you drive</li>
+          <li>Keep 100% of your earnings — we never take a cut</li>
+          <li>Get matched with restaurants in your area</li>
+        </ul>
+      </div>
+      <div class="audience-card card-foodies">
+        <div class="icon">🍕</div>
+        <h3>Food Lovers</h3>
+        <ul>
+          <li>Watch real video reviews, not fake star ratings</li>
+          <li>Discover restaurants by vibe, mood, or craving</li>
+          <li>Order & reserve directly from the app</li>
+          <li>100% free — no subscriptions, no fees</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works -->
+  <section class="section" style="padding-top: 0;">
+    <h2 class="section-title">How It Works</h2>
+    <p class="section-subtitle">From discovery to dinner in 30 seconds</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-number">1</div>
+        <h4>Watch</h4>
+        <p>Scroll through real food videos from local creators — just like TikTok</p>
+      </div>
+      <div class="step">
+        <div class="step-number">2</div>
+        <h4>Discover</h4>
+        <p>Find restaurants by cuisine, vibe, distance, or what you're craving right now</p>
+      </div>
+      <div class="step">
+        <div class="step-number">3</div>
+        <h4>Order or Reserve</h4>
+        <p>Tap to order online or book a table — all from the same app</p>
+      </div>
+      <div class="step">
+        <div class="step-number">4</div>
+        <h4>Everyone Wins</h4>
+        <p>Restaurants get customers. Creators get paid. You get great food.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Sign Up Form -->
+  <section class="signup-section" id="signup">
+    <h2 class="section-title">Get Early Access</h2>
+    <p class="section-subtitle">Be the first to join ReelBite in your city</p>
+
+    <div class="form-container">
+      <div class="form-tabs">
+        <button class="form-tab active" onclick="switchTab('restaurant')">🏪 Restaurant</button>
+        <button class="form-tab" onclick="switchTab('creator')">🎬 Creator</button>
+        <button class="form-tab" onclick="switchTab('foodie')">🍕 Food Lover</button>
+      </div>
+
+      <!-- Restaurant Form -->
+      <form id="form-restaurant" onsubmit="handleSubmit(event, 'restaurant')">
+        <div class="form-group">
+          <label>Restaurant Name</label>
+          <input type="text" name="restaurant_name" placeholder="e.g. Bella Napoli" required>
+        </div>
+        <div class="form-group">
+          <label>Your Name</label>
+          <input type="text" name="name" placeholder="Owner/Manager name" required>
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" name="email" placeholder="you@restaurant.com" required>
+        </div>
+        <div class="form-group">
+          <label>City</label>
+          <input type="text" name="city" placeholder="e.g. New York" required>
+        </div>
+        <div class="form-group">
+          <label>Cuisine Type</label>
+          <select name="cuisine">
+            <option value="">Select cuisine...</option>
+            <option>Italian</option><option>Japanese</option>
+            <option>Mexican</option><option>Thai</option>
+            <option>Indian</option><option>American</option>
+            <option>Chinese</option><option>Korean</option>
+            <option>Mediterranean</option><option>Seafood</option>
+            <option>BBQ</option><option>Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Website (optional)</label>
+          <input type="url" name="website" placeholder="https://yourrestaurant.com">
+        </div>
+        <button type="submit" class="submit-btn">List My Restaurant — Free</button>
+        <p class="form-note">No credit card required. Free forever for early partners.</p>
+      </form>
+
+      <!-- Creator Form -->
+      <form id="form-creator" style="display:none;" onsubmit="handleSubmit(event, 'creator')">
+        <div class="form-group">
+          <label>Your Name</label>
+          <input type="text" name="name" placeholder="Your name" required>
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" name="email" placeholder="you@email.com" required>
+        </div>
+        <div class="form-group">
+          <label>TikTok / Instagram Handle</label>
+          <input type="text" name="social" placeholder="@yourhandle" required>
+        </div>
+        <div class="form-group">
+          <label>City</label>
+          <input type="text" name="city" placeholder="e.g. New York" required>
+        </div>
+        <div class="form-group">
+          <label>Follower Count</label>
+          <select name="followers">
+            <option value="">Select range...</option>
+            <option>Under 1K</option>
+            <option>1K - 10K</option>
+            <option>10K - 50K</option>
+            <option>50K - 100K</option>
+            <option>100K+</option>
+          </select>
+        </div>
+        <button type="submit" class="submit-btn">Join as Creator</button>
+        <p class="form-note">Start earning from your very first review.</p>
+      </form>
+
+      <!-- Foodie Form -->
+      <form id="form-foodie" style="display:none;" onsubmit="handleSubmit(event, 'foodie')">
+        <div class="form-group">
+          <label>Your Name</label>
+          <input type="text" name="name" placeholder="Your name" required>
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" name="email" placeholder="you@email.com" required>
+        </div>
+        <div class="form-group">
+          <label>City</label>
+          <input type="text" name="city" placeholder="e.g. New York" required>
+        </div>
+        <button type="submit" class="submit-btn">Get Early Access</button>
+        <p class="form-note">We'll notify you when ReelBite launches in your city.</p>
+      </form>
+
+      <div class="success-msg" id="success-msg">
+        <h3>🎉 You're in!</h3>
+        <p>We'll be in touch soon. Welcome to ReelBite.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <p>
+      &copy; 2026 ReelBite. Built with 🔥 for food lovers everywhere.<br>
+      <a href="mailto:hello@reelbite.app">hello@reelbite.app</a>
+    </p>
+  </footer>
+
+  <script>
+    function switchTab(type) {
+      document.querySelectorAll('.form-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('form').forEach(f => f.style.display = 'none');
+      document.getElementById('success-msg').style.display = 'none';
+
+      event.target.classList.add('active');
+      document.getElementById('form-' + type).style.display = 'block';
+    }
+
+    async function handleSubmit(e, type) {
+      e.preventDefault();
+      const form = e.target;
+      const data = Object.fromEntries(new FormData(form));
+      data.type = type;
+      data.timestamp = new Date().toISOString();
+
+      // Store in localStorage as backup
+      const signups = JSON.parse(localStorage.getItem('reelbite_signups') || '[]');
+      signups.push(data);
+      localStorage.setItem('reelbite_signups', JSON.stringify(signups));
+
+      // Try to send to a webhook/API (configure later)
+      try {
+        // Uncomment and add your endpoint when ready:
+        // await fetch('https://your-api.com/signup', {
+        //   method: 'POST',
+        //   headers: { 'Content-Type': 'application/json' },
+        //   body: JSON.stringify(data)
+        // });
+        console.log('Signup:', data);
+      } catch (err) {
+        console.log('Offline signup saved locally');
+      }
+
+      form.style.display = 'none';
+      document.getElementById('success-msg').style.display = 'block';
+    }
+  </script>
+</body>
+</html>
